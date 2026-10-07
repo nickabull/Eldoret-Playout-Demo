@@ -91,7 +91,7 @@ async function searchSpotify(){
   const q=$('spotifyQuery').value.trim();if(!q)return;
   if(!spotifyToken){toast('Connect Spotify first');return}
   updateSpotifyStatus('Searching Spotify…');
-  const r=await fetch('https://api.spotify.com/v1/search?type=track&limit=12&q='+encodeURIComponent(q),{headers:{Authorization:'Bearer '+spotifyToken}});
+  const r=await fetch('https://api.spotify.com/v1/search?type=track&limit=10&q='+encodeURIComponent(q),{headers:{Authorization:'Bearer '+spotifyToken}});
   let j={}; try{j=await r.json()}catch{}
   if(r.status===401){spotifyToken='';sessionStorage.removeItem('spotify_access_token');updateSpotifyStatus('401: Spotify session expired — reconnect');return}
   if(!r.ok){const msg=j?.error?.message||j?.error||r.statusText||'Unknown error';updateSpotifyStatus(r.status+': '+msg);return}
