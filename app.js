@@ -92,9 +92,10 @@ async function searchSpotify(){
   if(!spotifyToken){toast('Connect Spotify first');return}
   updateSpotifyStatus('Searching Spotify…');
   const r=await fetch('https://api.spotify.com/v1/search?type=track&limit=12&q='+encodeURIComponent(q),{headers:{Authorization:'Bearer '+spotifyToken}});
-  if(r.status===401){spotifyToken='';sessionStorage.removeItem('spotify_access_token');updateSpotifyStatus('Spotify session expired — reconnect');return}
-  if(!r.ok){updateSpotifyStatus('Spotify search failed');return}
-  const j=await r.json();renderSpotify(j.tracks?.items||[]);updateSpotifyStatus((j.tracks?.items?.length||0)+' results');
+  let j={}; try{j=await r.json()}catch{}
+  if(r.status===401){spotifyToken='';sessionStorage.removeItem('spotify_access_token');updateSpotifyStatus('401: Spotify session expired — reconnect');return}
+  if(!r.ok){const msg=j?.error?.message||j?.error||r.statusText||'Unknown error';updateSpotifyStatus(r.status+': '+msg);return}
+  renderSpotify(j.tracks?.items||[]);updateSpotifyStatus((j.tracks?.items?.length||0)+' results');
 }
 
 function renderSpotify(rows){
@@ -122,7 +123,14 @@ function findLocalMatch(title,artist){
   $('search').value=hit.title;library();toast('Local match found');
 }
 
+async function testSpotify(){
+  if(!spotifyToken){updateSpotifyStatus('Not connected');return}
+  const r=await fetch('https://api.spotify.com/v1/me',{headers:{Authorization:'Bearer '+spotifyToken}});
+  let j={};try{j=await r.json()}catch{}
+  if(r.ok){updateSpotifyStatus('Connected as '+(j.display_name||'Spotify user')+(j.product?' • '+j.product.toUpperCase():''));return}
+  updateSpotifyStatus(r.status+': '+(j?.error?.message||r.statusText||'Spotify profile check failed'));
+}
 $('spotifyConnect').onclick=connectSpotify;
 $('spotifySearchBtn').onclick=searchSpotify;
 $('spotifyQuery').addEventListener('keydown',e=>{if(e.key==='Enter')searchSpotify()});
-handleSpotifyCallback().then(()=>updateSpotifyStatus());
+handleSpotifyCallback().then(()=>testSpotify());
