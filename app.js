@@ -1,16 +1,25 @@
 const $=x=>document.getElementById(x);
 let lib=[],log=[],sel=null,play=-1;
 const A=$('deckA'),B=$('deckB');let deck=A;
+let activeBank=0, editingCart=null;
+const BANKS=4,SLOTS=16;
+const defaultColors=['#cb3b3b','#2466be','#d4831a','#209c58','#7c4dc2','#4a5c70'];
+let cartBanks=JSON.parse(localStorage.getItem('eldoret-cart-banks')||'null')||Array.from({length:BANKS},()=>Array.from({length:SLOTS},()=>null));
+const cartPlayers={};
+
 const mm=s=>String(Math.floor(s/60)).padStart(2,'0')+':'+String(Math.floor(s%60)).padStart(2,'0');
+const saveCarts=()=>localStorage.setItem('eldoret-cart-banks',JSON.stringify(cartBanks));
 function row(x,i){const d=document.createElement('div');d.className='row '+x.type+(i===play?' playing':'')+(x.id===sel?' selected':'');d.draggable=true;d.innerHTML='<div>'+(i===play?'▶':i+1)+'</div><div>--:--</div><div><span class="pill '+x.type+'">'+x.type.toUpperCase()+'</span></div><div><b>'+x.title+'</b><br><small>'+x.artist+'</small></div><div>'+mm(x.dur)+'</div><div>'+mm(x.intro)+'</div><div>'+mm(x.segue||0)+'</div><div>--:--</div>';d.onclick=()=>{sel=x.id;render();edit()};d.ondragstart=()=>window.drag=i;d.ondragover=e=>e.preventDefault();d.ondrop=e=>{e.preventDefault();const [m]=log.splice(window.drag,1);log.splice(i,0,m);render()};return d}
 function render(){const r=$('schedule');r.innerHTML='';log.forEach((x,i)=>r.appendChild(row(x,i)));const p=log[play],n=log[play<0?0:play+1];$('nowTitle').textContent=p?.title||'Stopped';$('nowArtist').textContent=p?.artist||'Import audio to begin';$('nextTitle').textContent=n?.title||'Nothing queued';$('nextArtist').textContent=n?.artist||'—';$('nextDuration').textContent=n?mm(n.dur):'00:00'}
 function edit(){const x=log.find(v=>v.id===sel);$('emptyEditor').hidden=!!x;$('editorForm').hidden=!x;if(!x)return;$('eTitle').value=x.title;$('eArtist').value=x.artist;$('eDur').value=mm(x.dur);$('eType').value=x.type;$('eIntro').value=mm(x.intro);$('eCue').value=mm(x.cue);$('eSegue').value=mm(x.segue||0);$('eFade').value=mm(x.fade);$('eFixed').value=x.fixed||''}
 function parse(t){const p=t.split(':').map(Number);return (p[0]||0)*60+(p[1]||0)}
 function update(){const x=log.find(v=>v.id===sel);if(!x)return;x.title=$('eTitle').value;x.artist=$('eArtist').value;x.dur=parse($('eDur').value);x.type=$('eType').value;x.intro=parse($('eIntro').value);x.cue=parse($('eCue').value);x.segue=parse($('eSegue').value);x.fade=parse($('eFade').value);x.fixed=$('eFixed').value;render()}
 ['eTitle','eArtist','eDur','eType','eIntro','eCue','eSegue','eFade','eFixed'].forEach(id=>$(id).oninput=update);
-$('audioFiles').onchange=e=>[...e.target.files].forEach(f=>{const u=URL.createObjectURL(f),a=new Audio(u);a.onloadedmetadata=()=>{const n=f.name.replace(/\.[^.]+$/,''),p=n.split(' - '),artist=p.length>1?p.shift():'Imported audio',title=p.length?p.join(' - '):n;lib.push({id:crypto.randomUUID(),title,artist,dur:a.duration,url:u});library()}});
-function library(){const q=$('search').value.toLowerCase(),r=$('library');r.innerHTML='';lib.filter(x=>(x.title+' '+x.artist).toLowerCase().includes(q)).forEach(x=>{const d=document.createElement('div');d.className='librow';d.innerHTML='<span><b>'+x.title+'</b><br><small>'+x.artist+'</small></span><span>'+mm(x.dur)+'</span><button>+</button>';d.querySelector('button').onclick=()=>{const n={...x,id:crypto.randomUUID(),intro:0,cue:0,segue:Math.max(0,x.dur-5),fade:2,type:'auto',fixed:''};log.push(n);sel=n.id;render();edit()};r.appendChild(d)})}
+
+$('audioFiles').onchange=e=>[...e.target.files].forEach(f=>{const u=URL.createObjectURL(f),a=new Audio(u);a.onloadedmetadata=()=>{const n=f.name.replace(/\.[^.]+$/,''),p=n.split(' - '),artist=p.length>1?p.shift():'Imported audio',title=p.length?p.join(' - '):n;lib.push({id:crypto.randomUUID(),title,artist,dur:a.duration,url:u});library();renderCarts()}});
+function library(){const q=$('search').value.toLowerCase(),r=$('library');r.innerHTML='';lib.filter(x=>(x.title+' '+x.artist).toLowerCase().includes(q)).forEach(x=>{const d=document.createElement('div');d.className='librow';d.draggable=true;d.dataset.libid=x.id;d.innerHTML='<span><b>'+x.title+'</b><br><small>'+x.artist+'</small></span><span>'+mm(x.dur)+'</span><button>+</button>';d.ondragstart=e=>e.dataTransfer.setData('text/plain',x.id);d.querySelector('button').onclick=()=>{const n={...x,id:crypto.randomUUID(),intro:0,cue:0,segue:Math.max(0,x.dur-5),fade:2,type:'auto',fixed:''};log.push(n);sel=n.id;render();edit()};r.appendChild(d)})}
 $('search').oninput=library;
+
 async function start(i){const x=log[i];if(!x?.url)return;const to=deck===A?B:A;to.src=x.url;to.currentTime=x.cue||0;await to.play();deck.pause();deck=to;play=i;$('status').textContent='Playing '+x.title;render()}
 $('playBtn').onclick=()=>{let i=log.findIndex(x=>x.id===sel);if(i<0)i=0;start(i)};
 $('nextBtn').onclick=()=>start(play<0?0:play+1);
@@ -20,5 +29,17 @@ $('deleteItem').onclick=()=>{log=log.filter(x=>x.id!==sel);sel=log[0]?.id||null;
 $('duplicate').onclick=()=>{const x=log.find(v=>v.id===sel);if(x){const n={...x,id:crypto.randomUUID(),title:x.title+' copy'};log.push(n);sel=n.id;render();edit()}};
 $('saveSchedule').onclick=()=>localStorage.setItem('eldoret-demo',JSON.stringify(log));
 $('loadSchedule').onclick=()=>{const s=localStorage.getItem('eldoret-demo');if(s){log=JSON.parse(s);sel=log[0]?.id||null;render();edit()}};
-function tick(){const d=new Date();$('clock').textContent=d.toLocaleTimeString('en-GB',{hour12:false});$('date').textContent=d.toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'})}
-tick();setInterval(tick,1000);library();render();
+
+function getCart(slot){return cartBanks[activeBank][slot]}
+function assignCart(slot,libId){const x=lib.find(v=>v.id===libId);if(!x)return;cartBanks[activeBank][slot]={libId,name:x.title,color:defaultColors[slot%defaultColors.length],loop:false};saveCarts();renderCarts()}
+function renderCarts(){const root=$('carts');root.innerHTML='';for(let i=0;i<SLOTS;i++){const cfg=getCart(i),src=cfg&&lib.find(v=>v.id===cfg.libId);const b=document.createElement('button');b.className='cart';b.dataset.slot=i;b.style.background=cfg?.color||defaultColors[i%defaultColors.length];const player=cartPlayers[activeBank+'-'+i];const playing=player&&!player.paused;b.classList.toggle('playing',!!playing);b.innerHTML='<span class="cartName">'+(cfg?.name||('CART '+(i+1)))+'</span><span class="cartTime">'+(playing?mm(Math.max(0,(src?.dur||0)-player.currentTime)):(src?mm(src.dur):'EMPTY'))+'</span><span class="cartState">'+(playing?'PLAY':'')+'</span>';b.ondragover=e=>{e.preventDefault();b.classList.add('dragover')};b.ondragleave=()=>b.classList.remove('dragover');b.ondrop=e=>{e.preventDefault();b.classList.remove('dragover');assignCart(i,e.dataTransfer.getData('text/plain'))};b.onclick=()=>toggleCart(i);b.oncontextmenu=e=>{e.preventDefault();openCartEditor(i)};root.appendChild(b)}}
+function toggleCart(slot){const key=activeBank+'-'+slot,cfg=getCart(slot),src=cfg&&lib.find(v=>v.id===cfg.libId);if(!src)return toast('Drag audio from the library onto this cart');const old=cartPlayers[key];if(old&&!old.paused){old.pause();old.currentTime=0;renderCarts();return}const a=new Audio(src.url);a.loop=!!cfg.loop;cartPlayers[key]=a;a.ontimeupdate=renderCarts;a.onended=renderCarts;a.play();renderCarts()}
+function openCartEditor(slot){editingCart=slot;const cfg=getCart(slot)||{};$('cartName').value=cfg.name||('CART '+(slot+1));$('cartColor').value=cfg.color||defaultColors[slot%defaultColors.length];$('cartLoop').checked=!!cfg.loop;$('cartModal').classList.remove('hidden')}
+$('cartCancel').onclick=()=>$('cartModal').classList.add('hidden');
+$('cartSave').onclick=()=>{const cfg=getCart(editingCart);if(cfg){cfg.name=$('cartName').value;cfg.color=$('cartColor').value;cfg.loop=$('cartLoop').checked;saveCarts();renderCarts()}$('cartModal').classList.add('hidden')};
+$('cartClear').onclick=()=>{const key=activeBank+'-'+editingCart;cartPlayers[key]?.pause();cartPlayers[key]=null;cartBanks[activeBank][editingCart]=null;saveCarts();renderCarts();$('cartModal').classList.add('hidden')};
+document.querySelectorAll('.bank').forEach(b=>b.onclick=()=>{activeBank=Number(b.dataset.bank);document.querySelectorAll('.bank').forEach(x=>x.classList.remove('active'));b.classList.add('active');renderCarts()});
+
+const toast=m=>{const t=$('toast');t.textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),1300)};
+function tick(){const d=new Date();$('clock').textContent=d.toLocaleTimeString('en-GB',{hour12:false});$('date').textContent=d.toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'});renderCarts()}
+tick();setInterval(tick,1000);library();render();renderCarts();
