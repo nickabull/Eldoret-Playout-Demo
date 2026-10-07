@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#07111e">
+<title>Eldoret Playout Demo</title>
+<link rel="stylesheet" href="styles.css">
+<link rel="manifest" href="manifest.json">
+</head>
+<body>
+<div class="app">
+<header class="top">
+  <section class="panel brand"><h1>ELDORET <b>PLAYOUT</b> <span>DEMO</span></h1><small>Browser playout workstation</small></section>
+  <section class="panel clock"><div id="date"></div><strong id="clock"></strong><em>ON AIR</em></section>
+  <section class="panel back"><small>BACKTIME TO NEXT HARD</small><strong id="backtime">--:--</strong><span id="hardLabel">No hard event</span></section>
+</header>
+
+<main>
+<section class="left">
+  <div class="decks">
+    <section class="panel deck">
+      <div class="deckhead"><b class="now">NOW</b><strong id="remain">00:00</strong></div>
+      <h2 id="nowTitle">Stopped</h2><p id="nowArtist">Import audio to begin</p>
+      <canvas id="waveNow" width="900" height="70"></canvas>
+      <div class="meta"><span id="nowCue">Cue 00:00</span><span id="nowSegue">Segue --:--</span></div>
+    </section>
+    <section class="panel deck">
+      <div class="deckhead"><b class="next">NEXT</b><strong id="nextStart">--:--:--</strong></div>
+      <h2 id="nextTitle">Nothing queued</h2><p id="nextArtist">—</p>
+      <canvas id="waveNext" width="500" height="70"></canvas>
+      <div class="meta"><span id="nextType">—</span><span id="nextDuration">00:00</span></div>
+    </section>
+  </div>
+
+  <section class="panel scheduleBox">
+    <div class="toolbar">
+      <button id="addBlank">+ Item</button><button id="duplicate">Duplicate</button><button id="deleteItem">Delete</button>
+      <button id="saveSchedule">Save</button><button id="loadSchedule">Load</button>
+      <span></span><select id="mode"><option>AUTO</option><option>ASSIST</option><option>LIVE</option></select>
+    </div>
+    <div class="headers"><div>#</div><div>START</div><div>TYPE</div><div>TITLE</div><div>DUR</div><div>INTRO</div><div>SEGUE</div><div>END</div></div>
+    <div id="schedule"></div>
+  </section>
+
+  <section class="panel cartbox"><h3>CART WALL</h3><div id="carts"></div></section>
+</section>
+
+<aside>
+  <section class="panel library">
+    <h3>AUDIO LIBRARY</h3>
+    <input id="search" placeholder="Search title or artist">
+    <label class="import">Import audio<input id="audioFiles" type="file" accept="audio/*" multiple hidden></label>
+    <div id="library"></div>
+  </section>
+
+  <section class="panel editor">
+    <h3>ITEM EDITOR</h3>
+    <div id="emptyEditor">Select an item in the running order.</div>
+    <div id="editorForm" hidden>
+      <label>Title<input id="eTitle"></label>
+      <label>Artist / detail<input id="eArtist"></label>
+      <div class="two"><label>Duration<input id="eDur"></label><label>Start type<select id="eType"><option value="auto">AUTO</option><option value="manual">MANUAL</option><option value="soft">SOFT</option><option value="hard">HARD</option></select></label></div>
+      <div class="two"><label>Intro<input id="eIntro"></label><label>Cue<input id="eCue"></label></div>
+      <div class="two"><label>Segue<input id="eSegue"></label><label>Fade<input id="eFade"></label></div>
+      <label>Fixed hard time<input id="eFixed" placeholder="15:00:00"></label>
+    </div>
+  </section>
+</aside>
+</main>
+
+<footer class="panel"><div id="status">Ready</div><div><button id="stopBtn">■ STOP</button><button id="playBtn">▶ PLAY</button><button id="nextBtn" class="go">NEXT ▶</button></div></footer>
+</div>
+<audio id="deckA"></audio><audio id="deckB"></audio>
+<div id="toast"></div>
+<script src="app.js"></script>
+</body>
+</html>
