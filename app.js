@@ -43,3 +43,86 @@ document.querySelectorAll('.bank').forEach(b=>b.onclick=()=>{activeBank=Number(b
 const toast=m=>{const t=$('toast');t.textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),1300)};
 function tick(){const d=new Date();$('clock').textContent=d.toLocaleTimeString('en-GB',{hour12:false});$('date').textContent=d.toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'});renderCarts()}
 tick();setInterval(tick,1000);library();render();renderCarts();
+
+/* Spotify reference integration - metadata/search only, never used as playout audio */
+const SPOTIFY_REDIRECT=location.origin+location.pathname;
+let spotifyToken=sessionStorage.getItem('spotify_access_token')||'';
+let spotifyClientId=localStorage.getItem('spotify_client_id')||'';
+
+function b64url(bytes){return btoa(String.fromCharCode(...new Uint8Array(bytes))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'')}
+async function sha256(text){return crypto.subtle.digest('SHA-256',new TextEncoder().encode(text))}
+function randomVerifier(){const a=new Uint8Array(48);crypto.getRandomValues(a);return b64url(a)}
+function spotifyConnected(){return !!spotifyToken}
+function updateSpotifyStatus(msg){$('spotifyStatus').textContent=msg|| (spotifyConnected()?'Connected to Spotify':'Not connected')}
+
+async function connectSpotify(){
+  spotifyClientId=spotifyClientId||prompt('Paste your Spotify Client ID');
+  if(!spotifyClientId)return;
+  localStorage.setItem('spotify_client_id',spotifyClientId);
+  const verifier=randomVerifier(),challenge=b64url(await sha256(verifier)),state=crypto.randomUUID();
+  sessionStorage.setItem('spotify_verifier',verifier);
+  sessionStorage.setItem('spotify_state',state);
+  const p=new URLSearchParams({
+    response_type:'code',
+    client_id:spotifyClientId,
+    scope:'user-read-private',
+    redirect_uri:SPOTIFY_REDIRECT,
+    state,
+    code_challenge_method:'S256',
+    code_challenge:challenge
+  });
+  location.href='https://accounts.spotify.com/authorize?'+p.toString();
+}
+
+async function handleSpotifyCallback(){
+  const q=new URLSearchParams(location.search),code=q.get('code'),state=q.get('state');
+  if(!code)return;
+  if(state!==sessionStorage.getItem('spotify_state')){updateSpotifyStatus('Spotify login state mismatch');return}
+  const verifier=sessionStorage.getItem('spotify_verifier');
+  const body=new URLSearchParams({client_id:spotifyClientId||localStorage.getItem('spotify_client_id')||'',grant_type:'authorization_code',code,redirect_uri:SPOTIFY_REDIRECT,code_verifier:verifier});
+  const r=await fetch('https://accounts.spotify.com/api/token',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body});
+  if(!r.ok){updateSpotifyStatus('Spotify connection failed');return}
+  const j=await r.json();spotifyToken=j.access_token;sessionStorage.setItem('spotify_access_token',spotifyToken);
+  history.replaceState({},'',SPOTIFY_REDIRECT);
+  updateSpotifyStatus('Spotify connected');
+}
+
+async function searchSpotify(){
+  const q=$('spotifyQuery').value.trim();if(!q)return;
+  if(!spotifyToken){toast('Connect Spotify first');return}
+  updateSpotifyStatus('Searching Spotify…');
+  const r=await fetch('https://api.spotify.com/v1/search?type=track&limit=12&q='+encodeURIComponent(q),{headers:{Authorization:'Bearer '+spotifyToken}});
+  if(r.status===401){spotifyToken='';sessionStorage.removeItem('spotify_access_token');updateSpotifyStatus('Spotify session expired — reconnect');return}
+  if(!r.ok){updateSpotifyStatus('Spotify search failed');return}
+  const j=await r.json();renderSpotify(j.tracks?.items||[]);updateSpotifyStatus((j.tracks?.items?.length||0)+' results');
+}
+
+function renderSpotify(rows){
+  const root=$('spotifyResults');root.innerHTML='';
+  rows.forEach(t=>{
+    const d=document.createElement('div');d.className='spotifyRow';
+    const img=t.album?.images?.at(-1)?.url||t.album?.images?.[0]?.url||'';
+    const artists=(t.artists||[]).map(a=>a.name).join(', ');
+    d.innerHTML='<img src="'+img+'" alt=""><div class="spotifyMeta"><b>'+t.name+'</b><small>'+artists+' • '+(t.album?.name||'')+'</small></div><div class="spotifyActions"><a target="_blank" rel="noopener" href="'+(t.external_urls?.spotify||'#')+'">Open</a><button>Use metadata</button><button>Find local</button></div>';
+    const buttons=d.querySelectorAll('button');
+    buttons[0].onclick=()=>useSpotifyMetadata(t.name,artists);
+    buttons[1].onclick=()=>findLocalMatch(t.name,artists);
+    root.appendChild(d);
+  });
+}
+function useSpotifyMetadata(title,artist){
+  const x=log.find(v=>v.id===sel);
+  if(!x){toast('Select a running-order item first');return}
+  x.title=title;x.artist=artist;render();edit();toast('Spotify metadata applied');
+}
+function findLocalMatch(title,artist){
+  const n=title.toLowerCase(),a=artist.toLowerCase();
+  const hit=lib.find(x=>x.title.toLowerCase()===n || (x.title.toLowerCase().includes(n)&&a.includes(x.artist.toLowerCase())));
+  if(!hit){toast('No matching local audio found');return}
+  $('search').value=hit.title;library();toast('Local match found');
+}
+
+$('spotifyConnect').onclick=connectSpotify;
+$('spotifySearchBtn').onclick=searchSpotify;
+$('spotifyQuery').addEventListener('keydown',e=>{if(e.key==='Enter')searchSpotify()});
+handleSpotifyCallback().then(()=>updateSpotifyStatus());
