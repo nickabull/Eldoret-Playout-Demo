@@ -101,15 +101,22 @@ async function searchSpotify(){
 function renderSpotify(rows){
   const root=$('spotifyResults');root.innerHTML='';
   rows.forEach(t=>{
-    const d=document.createElement('div');d.className='spotifyRow';
+    const d=document.createElement('div');d.className='spotifyRow';d.draggable=true;
     const img=t.album?.images?.at(-1)?.url||t.album?.images?.[0]?.url||'';
     const artists=(t.artists||[]).map(a=>a.name).join(', ');
-    d.innerHTML='<img src="'+img+'" alt=""><div class="spotifyMeta"><b>'+t.name+'</b><small>'+artists+' • '+(t.album?.name||'')+'</small></div><div class="spotifyActions"><a target="_blank" rel="noopener" href="'+(t.external_urls?.spotify||'#')+'">Open</a><button>Use metadata</button><button>Find local</button></div>';
+    const ref={source:'spotify',spotifyId:t.id,title:t.name,artist:artists,album:t.album?.name||'',artwork:img,dur:Math.round((t.duration_ms||180000)/1000),audioMissing:true};
+    d.addEventListener('dragstart',e=>{e.dataTransfer.effectAllowed='copy';e.dataTransfer.setData('application/x-eldoret-spotify',JSON.stringify(ref));e.dataTransfer.setData('text/plain',JSON.stringify(ref));});
+    d.innerHTML='<img src="'+img+'" alt=""><div class="spotifyMeta"><b>'+t.name+'</b><small>'+artists+' • '+(t.album?.name||'')+'</small><em>Drag to running order</em></div><div class="spotifyActions"><a target="_blank" rel="noopener" href="'+(t.external_urls?.spotify||'#')+'">Open</a><button>Use metadata</button><button>Find local</button></div>';
     const buttons=d.querySelectorAll('button');
     buttons[0].onclick=()=>useSpotifyMetadata(t.name,artists);
     buttons[1].onclick=()=>findLocalMatch(t.name,artists);
     root.appendChild(d);
   });
+}
+function addSpotifyReference(ref,index=null){
+  const item={id:crypto.randomUUID(),title:ref.title,artist:ref.artist||'',dur:Number(ref.dur||180),intro:0,segue:0,fade:0,cue:0,type:'AUTO',fixed:'',src:null,mediaId:null,source:'spotify-reference',spotifyId:ref.spotifyId||'',album:ref.album||'',artwork:ref.artwork||'',audioMissing:true};
+  if(index===null||index<0||index>log.length)log.push(item);else log.splice(index,0,item);
+  sel=item.id;render();edit();toast('Added Spotify reference — local audio needed');
 }
 function useSpotifyMetadata(title,artist){
   const x=log.find(v=>v.id===sel);
@@ -134,3 +141,18 @@ $('spotifyConnect').onclick=connectSpotify;
 $('spotifySearchBtn').onclick=searchSpotify;
 $('spotifyQuery').addEventListener('keydown',e=>{if(e.key==='Enter')searchSpotify()});
 handleSpotifyCallback().then(()=>testSpotify());
+
+function enableSpotifyScheduleDrop(){
+  const root=$('runningOrder')||$('log')||document.querySelector('.runningOrder')||document.querySelector('tbody');
+  if(!root||root.dataset.spotifyDrop)return;
+  root.dataset.spotifyDrop='1';
+  root.addEventListener('dragover',e=>{if(e.dataTransfer.types.includes('application/x-eldoret-spotify')){e.preventDefault();e.dataTransfer.dropEffect='copy';}});
+  root.addEventListener('drop',e=>{
+    const raw=e.dataTransfer.getData('application/x-eldoret-spotify');if(!raw)return;
+    e.preventDefault();let ref;try{ref=JSON.parse(raw)}catch{return}
+    const row=e.target.closest('[data-id],tr,.row');let at=null;
+    if(row){const id=row.dataset.id;const n=id?log.findIndex(x=>x.id===id):-1;if(n>=0)at=n;}
+    addSpotifyReference(ref,at);
+  });
+}
+setTimeout(enableSpotifyScheduleDrop,0);
