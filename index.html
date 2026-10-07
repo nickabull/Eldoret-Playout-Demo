@@ -43,7 +43,10 @@
     <div id="schedule"></div>
   </section>
 
-  <section class="panel cartbox"><h3>CART WALL</h3><div id="carts"></div></section>
+  <section class="panel cartbox">
+  <div class="cartHead"><h3>CART WALL</h3><div class="cartBanks"><button class="bank active" data-bank="0">JINGLES</button><button class="bank" data-bank="1">SFX</button><button class="bank" data-bank="2">BEDS</button><button class="bank" data-bank="3">PROMOS</button></div></div>
+  <div id="carts"></div>
+</section>
 </section>
 
 <aside>
@@ -72,6 +75,7 @@
 <footer class="panel"><div id="status">Ready</div><div><button id="stopBtn">■ STOP</button><button id="playBtn">▶ PLAY</button><button id="nextBtn" class="go">NEXT ▶</button></div></footer>
 </div>
 <audio id="deckA"></audio><audio id="deckB"></audio>
+<div id="cartModal" class="modal hidden"><div class="modalCard"><h3>Edit cart</h3><label>Name<input id="cartName"></label><label>Colour<input id="cartColor" type="color"></label><label><input id="cartLoop" type="checkbox"> Loop</label><div class="modalActions"><button id="cartClear">Clear cart</button><button id="cartCancel">Cancel</button><button id="cartSave" class="go">Save</button></div></div></div>
 <div id="toast"></div>
 <script src="app.js"></script>
 </body>
