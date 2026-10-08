@@ -108,6 +108,25 @@ async function searchSpotify(){
   renderSpotify(j.tracks?.items||[]);updateSpotifyStatus((j.tracks?.items?.length||0)+' results');
 }
 
+function listenSpotify(id){
+ if(!/^[A-Za-z0-9]{22}$/.test(String(id||''))){toast('No valid Spotify track ID');return}
+ const modal=$('spotifyListenModal'),frame=$('spotifyListenFrame');
+ if(!modal||!frame)return;
+ frame.src='https://open.spotify.com/embed/track/'+id+'?utm_source=generator';
+ modal.classList.remove('hidden');
+}
+function closeSpotifyListen(){
+ const modal=$('spotifyListenModal'),frame=$('spotifyListenFrame');
+ if(frame)frame.src='about:blank';
+ if(modal)modal.classList.add('hidden');
+}
+$('spotifyListenClose').onclick=closeSpotifyListen;
+$('spotifyListenModal').addEventListener('click',e=>{if(e.target.id==='spotifyListenModal')closeSpotifyListen()});
+$('spotifyListenSelected').onclick=()=>{
+ const x=log.find(v=>v.id===sel);
+ if(!x?.spotifyId){toast('Select a Spotify track in the running order');return}
+ listenSpotify(x.spotifyId);
+};
 function renderSpotify(rows){
   const root=$('spotifyResults');root.innerHTML='';
   rows.forEach(t=>{
@@ -116,11 +135,12 @@ function renderSpotify(rows){
     const artists=(t.artists||[]).map(a=>a.name).join(', ');
     const ref={source:'spotify',spotifyId:t.id,title:t.name,artist:artists,album:t.album?.name||'',artwork:img,dur:Math.round((t.duration_ms||180000)/1000),audioMissing:true};
     d.addEventListener('dragstart',e=>{e.dataTransfer.effectAllowed='copy';e.dataTransfer.setData('application/x-eldoret-spotify',JSON.stringify(ref));e.dataTransfer.setData('text/plain',JSON.stringify(ref));});
-    d.innerHTML='<img src="'+img+'" alt=""><div class="spotifyMeta"><b>'+t.name+'</b><small>'+artists+' • '+(t.album?.name||'')+'</small><em>Drag to running order</em></div><div class="spotifyActions"><a target="_blank" rel="noopener" href="'+(t.external_urls?.spotify||'#')+'">Open</a><button class="spotifyAdd">+ Running order</button><button>Use metadata</button><button>Find local</button></div>';
+    d.innerHTML='<img src="'+img+'" alt=""><div class="spotifyMeta"><b>'+t.name+'</b><small>'+artists+' • '+(t.album?.name||'')+'</small><em>Drag to running order</em></div><div class="spotifyActions"><a target="_blank" rel="noopener" href="'+(t.external_urls?.spotify||'#')+'">Open</a><button class="spotifyListen">▶ Listen</button><button class="spotifyAdd">+ Running order</button><button>Use metadata</button><button>Find local</button></div>';
     const buttons=d.querySelectorAll('button');
-    buttons[0].onclick=()=>addSpotifyReference(ref);
-    buttons[1].onclick=()=>useSpotifyMetadata(t.name,artists);
-    buttons[2].onclick=()=>findLocalMatch(t.name,artists);
+    buttons[0].onclick=()=>listenSpotify(t.id);
+    buttons[1].onclick=()=>addSpotifyReference(ref);
+    buttons[2].onclick=()=>useSpotifyMetadata(t.name,artists);
+    buttons[3].onclick=()=>findLocalMatch(t.name,artists);
     root.appendChild(d);
   });
 }
