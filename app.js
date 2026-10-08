@@ -9,7 +9,7 @@ const cartPlayers={};
 
 const mm=s=>String(Math.floor(s/60)).padStart(2,'0')+':'+String(Math.floor(s%60)).padStart(2,'0');
 const saveCarts=()=>localStorage.setItem('eldoret-cart-banks',JSON.stringify(cartBanks));
-function row(x,i){const d=document.createElement('div');d.className='row '+x.type+(i===play?' playing':'')+(x.id===sel?' selected':'');d.draggable=true;d.innerHTML='<div>'+(i===play?'▶':i+1)+'</div><div>--:--</div><div><span class="pill '+x.type+'">'+x.type.toUpperCase()+'</span></div><div><b>'+x.title+'</b><br><small>'+x.artist+'</small></div><div>'+mm(x.dur)+'</div><div>'+mm(x.intro)+'</div><div>'+mm(x.segue||0)+'</div><div>--:--</div>';d.onclick=()=>{sel=x.id;render();edit()};d.ondragstart=()=>window.drag=i;d.ondragover=e=>e.preventDefault();d.ondrop=e=>{e.preventDefault();const [m]=log.splice(window.drag,1);log.splice(i,0,m);render()};return d}
+function row(x,i){const d=document.createElement('div');d.className='row '+x.type+(i===play?' playing':'')+(x.id===sel?' selected':'');d.draggable=true;d.innerHTML='<div>'+(i===play?'▶':i+1)+'</div><div>--:--</div><div><span class="pill '+x.type+'">'+x.type.toUpperCase()+'</span></div><div><b>'+x.title+'</b><br><small>'+x.artist+'</small></div><div>'+mm(x.dur)+'</div><div>'+mm(x.intro)+'</div><div>'+mm(x.segue||0)+'</div><div>--:--</div>';d.onclick=()=>{sel=x.id;render();edit()};d.dataset.id=x.id;d.ondragstart=e=>{window.drag=i;e.dataTransfer.setData('application/x-eldoret-row',String(i))};d.ondragover=e=>{e.preventDefault()};d.ondrop=e=>{const raw=e.dataTransfer.getData('application/x-eldoret-spotify');if(raw){e.preventDefault();e.stopPropagation();try{addSpotifyReference(JSON.parse(raw),i)}catch{}return}e.preventDefault();e.stopPropagation();if(Number.isInteger(window.drag)){const [m]=log.splice(window.drag,1);log.splice(i,0,m);render()}};return d}
 function render(){const r=$('schedule');r.innerHTML='';log.forEach((x,i)=>r.appendChild(row(x,i)));const p=log[play],n=log[play<0?0:play+1];$('nowTitle').textContent=p?.title||'Stopped';$('nowArtist').textContent=p?.artist||'Import audio to begin';$('nextTitle').textContent=n?.title||'Nothing queued';$('nextArtist').textContent=n?.artist||'—';$('nextDuration').textContent=n?mm(n.dur):'00:00'}
 function edit(){const x=log.find(v=>v.id===sel);$('emptyEditor').hidden=!!x;$('editorForm').hidden=!x;if(!x)return;$('eTitle').value=x.title;$('eArtist').value=x.artist;$('eDur').value=mm(x.dur);$('eType').value=x.type;$('eIntro').value=mm(x.intro);$('eCue').value=mm(x.cue);$('eSegue').value=mm(x.segue||0);$('eFade').value=mm(x.fade);$('eFixed').value=x.fixed||''}
 function parse(t){const p=t.split(':').map(Number);return (p[0]||0)*60+(p[1]||0)}
@@ -143,13 +143,13 @@ $('spotifyQuery').addEventListener('keydown',e=>{if(e.key==='Enter')searchSpotif
 handleSpotifyCallback().then(()=>testSpotify());
 
 function enableSpotifyScheduleDrop(){
-  const root=$('runningOrder')||$('log')||document.querySelector('.runningOrder')||document.querySelector('tbody');
+  const root=$('schedule');
   if(!root||root.dataset.spotifyDrop)return;
   root.dataset.spotifyDrop='1';
   root.addEventListener('dragover',e=>{if(e.dataTransfer.types.includes('application/x-eldoret-spotify')){e.preventDefault();e.dataTransfer.dropEffect='copy';}});
   root.addEventListener('drop',e=>{
     const raw=e.dataTransfer.getData('application/x-eldoret-spotify');if(!raw)return;
-    e.preventDefault();let ref;try{ref=JSON.parse(raw)}catch{return}
+    e.preventDefault();e.stopPropagation();let ref;try{ref=JSON.parse(raw)}catch{return}
     const row=e.target.closest('[data-id],tr,.row');let at=null;
     if(row){const id=row.dataset.id;const n=id?log.findIndex(x=>x.id===id):-1;if(n>=0)at=n;}
     addSpotifyReference(ref,at);
