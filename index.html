@@ -60,7 +60,7 @@
   <section class="panel spotify">
   <div class="spotifyHead"><h3>SPOTIFY REFERENCE</h3><button id="spotifyConnect">Connect Spotify</button></div>
   <div class="spotifySearch"><input id="spotifyQuery" placeholder="Search Spotify for a track or artist"><button id="spotifySearchBtn">Search</button></div>
-  <div id="spotifyStatus" class="spotifyStatus">Not connected</div>
+  <div id="spotifyStatus" class="spotifyStatus">Not connected</div><button id="spotifyListenSelected" title="Listen to selected Spotify track using the official Spotify player">▶ Listen to selected Spotify track</button>
   <div id="spotifyResults" class="spotifyResults"></div>
 </section>
 
@@ -83,7 +83,7 @@
 </div>
 <audio id="deckA"></audio><audio id="deckB"></audio>
 <div id="cartModal" class="modal hidden"><div class="modalCard"><h3>Edit cart</h3><label>Name<input id="cartName"></label><label>Colour<input id="cartColor" type="color"></label><label><input id="cartLoop" type="checkbox"> Loop</label><div class="modalActions"><button id="cartClear">Clear cart</button><button id="cartCancel">Cancel</button><button id="cartSave" class="go">Save</button></div></div></div>
-<div id="toast"></div>
+<div id="spotifyListenModal" class="modal hidden"><div class="modalCard spotifyListenCard"><div class="spotifyListenHead"><h3>SPOTIFY — PERSONAL LISTENING</h3><button id="spotifyListenClose">✕ Close</button></div><p>Official Spotify player. Playback requires Spotify login and is separate from Eldoret's playout decks, carts and mixer.</p><iframe id="spotifyListenFrame" title="Spotify personal listening" src="about:blank" width="100%" height="352" frameborder="0" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy"></iframe></div></div><div id="toast"></div>
 <script src="app.js"></script>
 </body>
 </html>
