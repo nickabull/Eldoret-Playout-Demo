@@ -118,8 +118,9 @@ function renderSpotify(rows){
     d.addEventListener('dragstart',e=>{e.dataTransfer.effectAllowed='copy';e.dataTransfer.setData('application/x-eldoret-spotify',JSON.stringify(ref));e.dataTransfer.setData('text/plain',JSON.stringify(ref));});
     d.innerHTML='<img src="'+img+'" alt=""><div class="spotifyMeta"><b>'+t.name+'</b><small>'+artists+' • '+(t.album?.name||'')+'</small><em>Drag to running order</em></div><div class="spotifyActions"><a target="_blank" rel="noopener" href="'+(t.external_urls?.spotify||'#')+'">Open</a><button class="spotifyAdd">+ Running order</button><button>Use metadata</button><button>Find local</button></div>';
     const buttons=d.querySelectorAll('button');
-    buttons[0].onclick=()=>useSpotifyMetadata(t.name,artists);
-    buttons[1].onclick=()=>findLocalMatch(t.name,artists);
+    buttons[0].onclick=()=>addSpotifyReference(ref);
+    buttons[1].onclick=()=>useSpotifyMetadata(t.name,artists);
+    buttons[2].onclick=()=>findLocalMatch(t.name,artists);
     root.appendChild(d);
   });
 }
