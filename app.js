@@ -8,6 +8,16 @@ let cartBanks=JSON.parse(localStorage.getItem('eldoret-cart-banks')||'null')||Ar
 const cartPlayers={};
 
 const mm=s=>String(Math.floor(s/60)).padStart(2,'0')+':'+String(Math.floor(s%60)).padStart(2,'0');
+const norm=s=>String(s||'').toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g,'').replace(/\([^)]*\)|\[[^\]]*\]/g,'').replace(/[^a-z0-9]+/g,' ').trim();
+function matchAudio(x){
+ const title=norm(x.title),artist=norm(x.artist);
+ return lib.find(y=>norm(y.title)===title&&(norm(y.artist)===artist||norm(y.artist)==='imported audio'||!artist))||null;
+}
+function linkSpotifyAudio(){
+ let linked=0;
+ log.filter(x=>x.source==='spotify-reference'&&!x.url).forEach(x=>{const hit=matchAudio(x);if(hit){x.url=hit.url;x.audioMissing=false;x.localAudioId=hit.id;linked++}});
+ if(linked){render();toast(linked+' Spotify reference(s) linked to local audio')}
+}
 const saveCarts=()=>localStorage.setItem('eldoret-cart-banks',JSON.stringify(cartBanks));
 function row(x,i){const d=document.createElement('div');d.className='row '+x.type+(i===play?' playing':'')+(x.id===sel?' selected':'');d.draggable=true;d.innerHTML='<div>'+(i===play?'▶':i+1)+'</div><div>--:--</div><div><span class="pill '+x.type+'">'+x.type.toUpperCase()+'</span></div><div><b>'+x.title+'</b><br><small>'+x.artist+'</small></div><div>'+mm(x.dur)+'</div><div>'+mm(x.intro)+'</div><div>'+mm(x.segue||0)+'</div><div>--:--</div>';d.onclick=()=>{sel=x.id;render();edit()};d.dataset.id=x.id;d.ondragstart=e=>{window.drag=i;e.dataTransfer.setData('application/x-eldoret-row',String(i))};d.ondragover=e=>{e.preventDefault()};d.ondrop=e=>{const raw=e.dataTransfer.getData('application/x-eldoret-spotify');if(raw){e.preventDefault();e.stopPropagation();try{addSpotifyReference(JSON.parse(raw),i)}catch{}return}e.preventDefault();e.stopPropagation();if(Number.isInteger(window.drag)){const [m]=log.splice(window.drag,1);log.splice(i,0,m);render()}};return d}
 function render(){const r=$('schedule');r.innerHTML='';log.forEach((x,i)=>r.appendChild(row(x,i)));const p=log[play],n=log[play<0?0:play+1];$('nowTitle').textContent=p?.title||'Stopped';$('nowArtist').textContent=p?.artist||'Import audio to begin';$('nextTitle').textContent=n?.title||'Nothing queued';$('nextArtist').textContent=n?.artist||'—';$('nextDuration').textContent=n?mm(n.dur):'00:00'}
@@ -16,11 +26,11 @@ function parse(t){const p=t.split(':').map(Number);return (p[0]||0)*60+(p[1]||0)
 function update(){const x=log.find(v=>v.id===sel);if(!x)return;x.title=$('eTitle').value;x.artist=$('eArtist').value;x.dur=parse($('eDur').value);x.type=$('eType').value;x.intro=parse($('eIntro').value);x.cue=parse($('eCue').value);x.segue=parse($('eSegue').value);x.fade=parse($('eFade').value);x.fixed=$('eFixed').value;render()}
 ['eTitle','eArtist','eDur','eType','eIntro','eCue','eSegue','eFade','eFixed'].forEach(id=>$(id).oninput=update);
 
-$('audioFiles').onchange=e=>[...e.target.files].forEach(f=>{const u=URL.createObjectURL(f),a=new Audio(u);a.onloadedmetadata=()=>{const n=f.name.replace(/\.[^.]+$/,''),p=n.split(' - '),artist=p.length>1?p.shift():'Imported audio',title=p.length?p.join(' - '):n;lib.push({id:crypto.randomUUID(),title,artist,dur:a.duration,url:u});library();renderCarts()}});
+$('audioFiles').onchange=e=>[...e.target.files].forEach(f=>{const u=URL.createObjectURL(f),a=new Audio(u);a.onloadedmetadata=()=>{const n=f.name.replace(/\.[^.]+$/,''),p=n.split(' - '),artist=p.length>1?p.shift():'Imported audio',title=p.length?p.join(' - '):n;lib.push({id:crypto.randomUUID(),title,artist,dur:a.duration,url:u});library();renderCarts();linkSpotifyAudio()}});
 function library(){const q=$('search').value.toLowerCase(),r=$('library');r.innerHTML='';lib.filter(x=>(x.title+' '+x.artist).toLowerCase().includes(q)).forEach(x=>{const d=document.createElement('div');d.className='librow';d.draggable=true;d.dataset.libid=x.id;d.innerHTML='<span><b>'+x.title+'</b><br><small>'+x.artist+'</small></span><span>'+mm(x.dur)+'</span><button>+</button>';d.ondragstart=e=>e.dataTransfer.setData('text/plain',x.id);d.querySelector('button').onclick=()=>{const n={...x,id:crypto.randomUUID(),intro:0,cue:0,segue:Math.max(0,x.dur-5),fade:2,type:'auto',fixed:''};log.push(n);sel=n.id;render();edit()};r.appendChild(d)})}
 $('search').oninput=library;
 
-async function start(i){const x=log[i];if(!x?.url)return;const to=deck===A?B:A;to.src=x.url;to.currentTime=x.cue||0;await to.play();deck.pause();deck=to;play=i;$('status').textContent='Playing '+x.title;render()}
+async function start(i){const x=log[i];if(!x)return;if(!x.url){$('status').textContent='AUDIO MISSING — import a local file for '+x.title;toast('Spotify reference only — import a playable audio file');return}const to=deck===A?B:A;to.src=x.url;to.currentTime=x.cue||0;await to.play();deck.pause();deck=to;play=i;$('status').textContent='Playing '+x.title;render()}
 $('playBtn').onclick=()=>{let i=log.findIndex(x=>x.id===sel);if(i<0)i=0;start(i)};
 $('nextBtn').onclick=()=>start(play<0?0:play+1);
 $('stopBtn').onclick=()=>{A.pause();B.pause();play=-1;$('status').textContent='Stopped';render()};
@@ -106,7 +116,7 @@ function renderSpotify(rows){
     const artists=(t.artists||[]).map(a=>a.name).join(', ');
     const ref={source:'spotify',spotifyId:t.id,title:t.name,artist:artists,album:t.album?.name||'',artwork:img,dur:Math.round((t.duration_ms||180000)/1000),audioMissing:true};
     d.addEventListener('dragstart',e=>{e.dataTransfer.effectAllowed='copy';e.dataTransfer.setData('application/x-eldoret-spotify',JSON.stringify(ref));e.dataTransfer.setData('text/plain',JSON.stringify(ref));});
-    d.innerHTML='<img src="'+img+'" alt=""><div class="spotifyMeta"><b>'+t.name+'</b><small>'+artists+' • '+(t.album?.name||'')+'</small><em>Drag to running order</em></div><div class="spotifyActions"><a target="_blank" rel="noopener" href="'+(t.external_urls?.spotify||'#')+'">Open</a><button>Use metadata</button><button>Find local</button></div>';
+    d.innerHTML='<img src="'+img+'" alt=""><div class="spotifyMeta"><b>'+t.name+'</b><small>'+artists+' • '+(t.album?.name||'')+'</small><em>Drag to running order</em></div><div class="spotifyActions"><a target="_blank" rel="noopener" href="'+(t.external_urls?.spotify||'#')+'">Open</a><button class="spotifyAdd">+ Running order</button><button>Use metadata</button><button>Find local</button></div>';
     const buttons=d.querySelectorAll('button');
     buttons[0].onclick=()=>useSpotifyMetadata(t.name,artists);
     buttons[1].onclick=()=>findLocalMatch(t.name,artists);
@@ -114,9 +124,10 @@ function renderSpotify(rows){
   });
 }
 function addSpotifyReference(ref,index=null){
-  const item={id:crypto.randomUUID(),title:ref.title,artist:ref.artist||'',dur:Number(ref.dur||180),intro:0,segue:0,fade:0,cue:0,type:'AUTO',fixed:'',src:null,mediaId:null,source:'spotify-reference',spotifyId:ref.spotifyId||'',album:ref.album||'',artwork:ref.artwork||'',audioMissing:true};
+  const item={id:crypto.randomUUID(),title:ref.title,artist:ref.artist||'',dur:Number(ref.dur||180),intro:0,segue:0,fade:0,cue:0,type:'auto',fixed:'',src:null,mediaId:null,source:'spotify-reference',spotifyId:ref.spotifyId||'',album:ref.album||'',artwork:ref.artwork||'',audioMissing:true};
   if(index===null||index<0||index>log.length)log.push(item);else log.splice(index,0,item);
-  sel=item.id;render();edit();toast('Added Spotify reference — local audio needed');
+  const hit=matchAudio(item);if(hit){item.url=hit.url;item.audioMissing=false;item.localAudioId=hit.id;}
+  sel=item.id;render();edit();toast(hit?'Spotify reference matched to local audio':'Added Spotify reference — local audio needed');
 }
 function useSpotifyMetadata(title,artist){
   const x=log.find(v=>v.id===sel);
