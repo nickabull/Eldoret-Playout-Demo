@@ -57,12 +57,16 @@ tick();setInterval(tick,1000);library();render();renderCarts();
 /* Spotify reference integration - metadata/search only, never used as playout audio */
 const SPOTIFY_REDIRECT=location.origin+location.pathname;
 let spotifyToken=sessionStorage.getItem('spotify_access_token')||'';
+let spotifyExpiresAt=Number(sessionStorage.getItem('spotify_expires_at')||0);
 let spotifyClientId=localStorage.getItem('spotify_client_id')||'';
 
 function b64url(bytes){return btoa(String.fromCharCode(...new Uint8Array(bytes))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'')}
 async function sha256(text){return crypto.subtle.digest('SHA-256',new TextEncoder().encode(text))}
 function randomVerifier(){const a=new Uint8Array(48);crypto.getRandomValues(a);return b64url(a)}
-function spotifyConnected(){return !!spotifyToken}
+function spotifyConnected(){return !!spotifyToken&&Date.now()<spotifyExpiresAt-30000}
+function storeSpotifyTokens(j){spotifyToken=j.access_token;spotifyExpiresAt=Date.now()+(Number(j.expires_in)||3600)*1000;sessionStorage.setItem('spotify_access_token',spotifyToken);sessionStorage.setItem('spotify_expires_at',String(spotifyExpiresAt));if(j.refresh_token)localStorage.setItem('spotify_refresh_token',j.refresh_token)}
+async function refreshSpotify(){const refresh=localStorage.getItem('spotify_refresh_token');if(!refresh||!spotifyClientId)return false;try{const body=new URLSearchParams({grant_type:'refresh_token',refresh_token:refresh,client_id:spotifyClientId});const r=await fetch('https://accounts.spotify.com/api/token',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body});if(!r.ok)return false;storeSpotifyTokens(await r.json());return true}catch{return false}}
+async function ensureSpotify(){if(spotifyConnected())return true;if(await refreshSpotify())return true;spotifyToken='';sessionStorage.removeItem('spotify_access_token');return false}
 function updateSpotifyStatus(msg){$('spotifyStatus').textContent=msg|| (spotifyConnected()?'Connected to Spotify':'Not connected')}
 
 async function connectSpotify(){
@@ -92,14 +96,14 @@ async function handleSpotifyCallback(){
   const body=new URLSearchParams({client_id:spotifyClientId||localStorage.getItem('spotify_client_id')||'',grant_type:'authorization_code',code,redirect_uri:SPOTIFY_REDIRECT,code_verifier:verifier});
   const r=await fetch('https://accounts.spotify.com/api/token',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body});
   if(!r.ok){updateSpotifyStatus('Spotify connection failed');return}
-  const j=await r.json();spotifyToken=j.access_token;sessionStorage.setItem('spotify_access_token',spotifyToken);
+  const j=await r.json();storeSpotifyTokens(j);
   history.replaceState({},'',SPOTIFY_REDIRECT);
   updateSpotifyStatus('Spotify connected');
 }
 
 async function searchSpotify(){
   const q=$('spotifyQuery').value.trim();if(!q)return;
-  if(!spotifyToken){toast('Connect Spotify first');return}
+  if(!await ensureSpotify()){toast('Connect Spotify first');updateSpotifyStatus('Reconnect Spotify to search');return}
   updateSpotifyStatus('Searching Spotify…');
   const r=await fetch('https://api.spotify.com/v1/search?type=track&limit=10&q='+encodeURIComponent(q),{headers:{Authorization:'Bearer '+spotifyToken}});
   let j={}; try{j=await r.json()}catch{}
@@ -163,7 +167,7 @@ function findLocalMatch(title,artist){
 }
 
 async function testSpotify(){
-  if(!spotifyToken){updateSpotifyStatus('Not connected');return}
+  if(!await ensureSpotify()){updateSpotifyStatus(spotifyClientId?'Connect Spotify to resume':'Not connected');return}
   const r=await fetch('https://api.spotify.com/v1/me',{headers:{Authorization:'Bearer '+spotifyToken}});
   let j={};try{j=await r.json()}catch{}
   if(r.ok){updateSpotifyStatus('Connected as '+(j.display_name||'Spotify user')+(j.product?' • '+j.product.toUpperCase():''));return}
@@ -172,7 +176,7 @@ async function testSpotify(){
 $('spotifyConnect').onclick=connectSpotify;
 $('spotifySearchBtn').onclick=searchSpotify;
 $('spotifyQuery').addEventListener('keydown',e=>{if(e.key==='Enter')searchSpotify()});
-handleSpotifyCallback().then(()=>testSpotify());
+handleSpotifyCallback().then(()=>testSpotify()).catch(()=>updateSpotifyStatus('Spotify connection needs attention'));
 
 function enableSpotifyScheduleDrop(){
   const root=$('schedule');
