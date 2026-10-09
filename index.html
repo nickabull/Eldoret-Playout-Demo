@@ -5,13 +5,13 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#07111e">
 <title>Bull'sHits Playout</title>
-<link rel="stylesheet" href="styles.css?v=0.6.0">
+<link rel="stylesheet" href="styles.css?v=0.6.1">
 <link rel="manifest" href="manifest.json">
 </head>
 <body>
-<div class="app">
+<div class="app"><nav style="display:flex;gap:12px;align-items:center;padding:7px 12px;background:#172e42;font-size:12px"><a style="color:#b5e4ff" href="scheduling.html" target="_blank" rel="noopener">↗ SCHEDULING</a><a style="color:#b5e4ff" href="logging.html" target="_blank" rel="noopener">↗ AS-RUN LOG</a><a style="color:#b5e4ff" href="cart-wall.html" target="_blank" rel="noopener">↗ CART WALL</a></nav>
 <header class="top">
-  <section class="panel brand"><h1>BULL'S<b>HITS</b> <span>DEMO</span></h1><small>Browser playout workstation</small><span class="devVersion" title="Development build">BUILD v0.6.0</span></section>
+  <section class="panel brand"><h1>BULL'S<b>HITS</b> <span>DEMO</span></h1><small>Browser playout workstation</small><span class="devVersion" title="Development build">BUILD v0.6.1</span></section>
   <section class="panel clock"><div id="date"></div><strong id="clock"></strong><em>ON AIR</em></section>
   <section class="panel back"><div class="backTiming"><small>BACKTIME TO NEXT HARD</small><strong id="backtime">--:--</strong><span id="hardLabel">No hard event</span></div><div class="meterBox"><div class="meterTitle">MASTER OUTPUT <span>PEAK dBFS</span></div><canvas id="masterMeter" width="360" height="77"></canvas><small id="meterStatus">SOFTWARE MIX · START AUDIO TO METER</small></div></section>
 </header>
@@ -86,11 +86,12 @@
 <audio id="deckA"></audio><audio id="deckB"></audio>
 <div id="cartModal" class="modal hidden"><div class="modalCard"><h3>Edit cart</h3><label>Name<input id="cartName"></label><label>Colour<input id="cartColor" type="color"></label><label><input id="cartLoop" type="checkbox"> Loop</label><div class="modalActions"><button id="cartClear">Clear cart</button><button id="cartCancel">Cancel</button><button id="cartSave" class="go">Save</button></div></div></div>
 <div id="spotifyListenModal" class="modal hidden"><div class="modalCard spotifyListenCard"><div class="spotifyListenHead"><h3>SPOTIFY — PERSONAL LISTENING</h3><button id="spotifyListenClose">✕ Close</button></div><p>Official Spotify player. Playback requires Spotify login and is separate from Eldoret's playout decks, carts and mixer.</p><iframe id="spotifyListenFrame" title="Spotify personal listening" src="about:blank" width="100%" height="352" frameborder="0" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy"></iframe></div></div><div id="toast"></div>
-<script src="meter.js?v=0.6.0"></script>
-<script src="app.js?v=0.6.0"></script>
-<script src="markers.js?v=0.6.0"></script>
-<script src="hotbox.js?v=0.6.0"></script>
-<script src="voice-track.js?v=0.6.0"></script>
-<script src="demo-library.js?v=0.6.0"></script>
+<script src="meter.js?v=0.6.1"></script>
+<script src="audit.js?v=0.6.1"></script>
+<script src="app.js?v=0.6.1"></script>
+<script src="markers.js?v=0.6.1"></script>
+<script src="hotbox.js?v=0.6.1"></script>
+<script src="voice-track.js?v=0.6.1"></script>
+<script src="demo-library.js?v=0.6.1"></script>
 </body>
 </html>
