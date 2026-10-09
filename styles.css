@@ -138,3 +138,23 @@
 .sonifexFace .sfCassetteLabel{position:absolute;z-index:3;left:4%;right:4%;top:2px;min-height:16px;padding:2px 3px;background:linear-gradient(#d8f1ff,#9bc9e6);color:#07325c;border:1px solid #d7f4ff;font:bold 10px Consolas,monospace;letter-spacing:.03em;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;box-shadow:0 1px 2px #001a38}
 .sonifexFace .sfCassetteReel{position:absolute;bottom:-4px;left:48%;font-size:18px;color:#a1dafa66}
 .sonifexFace.playing .sfCassette{box-shadow:inset 0 1px 2px #c1f5ff,0 0 7px #28c7ff99}
+
+/* v0.6.10 closer photo-faithful Sonifex micro HS faceplate */
+#carts.machineView .cart.sonifexFace{background:repeating-linear-gradient(0deg,#b9bcb5 0px,#d8d9d2 1px,#b7bbb5 2px,#c4c8c1 3px)!important;border:2px solid #777d79!important;border-top-color:#e6e7df!important;border-bottom:4px solid #6b716e!important;border-radius:1px!important;grid-template-columns:minmax(0,1fr) 43px 43px!important;grid-template-rows:37px 35px 16px!important;gap:2px 4px!important;padding:4px 6px!important}
+.sonifexFace .sfSlot{border:3px ridge #7d8581!important;background:linear-gradient(180deg,#050809 0%,#131819 12%,#293031 17%,#080d0d 45%,#14191a 72%,#020404 100%)!important;box-shadow:inset 0 0 6px #000,0 0 0 1px #4d5552!important}
+.sonifexFace .sfMechanism{color:#89928c!important;font-size:12px!important;top:-3px!important;left:4%!important;letter-spacing:8px!important}
+.sonifexFace .sfLogo{border:3px ridge #8e9691!important;background:linear-gradient(#d6d8d0,#aeb5ae)!important;align-items:flex-start!important;padding:1px 6px!important;position:relative}
+.sonifexFace .sfLogo:before{content:'';position:absolute;left:2px;top:50%;width:6px;height:6px;background:#323734;border:1px solid #747b75;border-radius:50%;transform:translateY(-50%)}
+.sonifexFace .sfLogo strong{font:900 clamp(10px,1.15vw,17px) Arial,sans-serif!important;letter-spacing:.045em!important;margin-left:7px!important;color:#101514!important}
+.sonifexFace .sfLogo small{font:700 7px Arial,sans-serif!important;margin-left:9px!important;color:#26302c!important}
+.sonifexFace .sfStop,.sonifexFace .sfPlay,.sonifexFace .sfFast{gap:1px!important}
+.sonifexFace .sfStop small,.sonifexFace .sfPlay small,.sonifexFace .sfFast small,.sonifexFace .sfTime small{font:700 7px Arial,sans-serif!important;letter-spacing:.12em!important;color:#343d38!important}
+.sonifexFace .sfStop span,.sonifexFace .sfPlay span,.sonifexFace .sfFast span{height:26px!important;width:35px!important;border:3px solid #444b47!important;border-top-color:#888e88!important;border-left-color:#888e88!important;border-radius:1px!important;font-size:0!important;box-shadow:inset 0 0 0 2px #0006,inset 0 2px 3px #fff5,0 1px 2px #0007!important}
+.sonifexFace .sfStop span{background:linear-gradient(#f75a59,#d21c27 45%,#b30012)!important}
+.sonifexFace .sfPlay span{background:linear-gradient(#56edaa,#10b76b 45%,#008347)!important}
+.sonifexFace .sfFast span{background:linear-gradient(#fff18d,#f5e02d 45%,#d8c000)!important}
+.sonifexFace .sfTime .cartTime{font:bold 11px Consolas,monospace!important;background:linear-gradient(#222824,#111814)!important;color:#f6e85b!important;border:2px inset #7d8880!important;letter-spacing:-.06em!important;padding:4px 1px!important}
+.sonifexFace .sfCassette{inset:2px 2px 2px 2px!important;border:1px solid #7ab9e8!important;border-bottom:4px solid #164e9c!important;border-radius:1px!important;background:linear-gradient(180deg,#59b3efdb 0%,#0755a3e8 32%,#1545a6e8 76%,#042b70ef 100%)!important}
+.sonifexFace .sfCassetteLabel{top:4px!important;left:2%!important;right:2%!important;background:linear-gradient(#f3f7f9,#c5e4f4)!important;color:#0b2854!important;border:1px solid #f8fbff!important;font:900 9px Consolas,monospace!important;letter-spacing:.12em!important}
+.sonifexFace .sfTitle{font:700 9px Arial,sans-serif!important}
+@media(max-width:850px){#carts.machineView .cart.sonifexFace{grid-template-columns:minmax(0,1fr) 29px 29px!important;gap:2px!important}.sonifexFace .sfStop span,.sonifexFace .sfPlay span,.sonifexFace .sfFast span{width:25px!important;height:23px!important}.sonifexFace .sfLogo strong{font-size:10px!important}}
