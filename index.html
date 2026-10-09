@@ -5,13 +5,13 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#07111e">
 <title>Eldoret Playout Demo</title>
-<link rel="stylesheet" href="styles.css?v=0.4.1">
+<link rel="stylesheet" href="styles.css?v=0.5.0">
 <link rel="manifest" href="manifest.json">
 </head>
 <body>
 <div class="app">
 <header class="top">
-  <section class="panel brand"><h1>ELDORET <b>PLAYOUT</b> <span>DEMO</span></h1><small>Browser playout workstation</small><span class="devVersion" title="Development build">BUILD v0.4.1</span></section>
+  <section class="panel brand"><h1>ELDORET <b>PLAYOUT</b> <span>DEMO</span></h1><small>Browser playout workstation</small><span class="devVersion" title="Development build">BUILD v0.5.0</span></section>
   <section class="panel clock"><div id="date"></div><strong id="clock"></strong><em>ON AIR</em></section>
   <section class="panel back"><small>BACKTIME TO NEXT HARD</small><strong id="backtime">--:--</strong><span id="hardLabel">No hard event</span></section>
 </header>
@@ -84,6 +84,7 @@
 <audio id="deckA"></audio><audio id="deckB"></audio>
 <div id="cartModal" class="modal hidden"><div class="modalCard"><h3>Edit cart</h3><label>Name<input id="cartName"></label><label>Colour<input id="cartColor" type="color"></label><label><input id="cartLoop" type="checkbox"> Loop</label><div class="modalActions"><button id="cartClear">Clear cart</button><button id="cartCancel">Cancel</button><button id="cartSave" class="go">Save</button></div></div></div>
 <div id="spotifyListenModal" class="modal hidden"><div class="modalCard spotifyListenCard"><div class="spotifyListenHead"><h3>SPOTIFY — PERSONAL LISTENING</h3><button id="spotifyListenClose">✕ Close</button></div><p>Official Spotify player. Playback requires Spotify login and is separate from Eldoret's playout decks, carts and mixer.</p><iframe id="spotifyListenFrame" title="Spotify personal listening" src="about:blank" width="100%" height="352" frameborder="0" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy"></iframe></div></div><div id="toast"></div>
-<script src="app.js?v=0.4.1"></script>
+<script src="app.js?v=0.5.0"></script>
+<script src="markers.js?v=0.5.0"></script>
 </body>
 </html>
