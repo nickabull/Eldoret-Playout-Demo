@@ -1,15 +1,25 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Airlite Hardware Tester</title>
-<style>body{background:#07111e;color:#e9f3ff;font:16px system-ui;margin:0;padding:24px}main{max-width:900px;margin:auto}h1{color:#70d7ff}button{background:#1474a5;color:white;border:0;border-radius:8px;padding:13px 18px;font-weight:bold;cursor:pointer;margin:5px}button:disabled{opacity:.45}section{background:#10263a;border:1px solid #35536a;border-radius:12px;padding:18px;margin:18px 0}pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:400px;overflow:auto;background:#050e18;padding:14px;border-radius:8px}.muted{color:#a9bdce}a{color:#83d8ff}</style></head><body><main><p><a href="./">← Back to Bull'sHits Playout</a></p><h1>🎚 Airlite Hardware Tester</h1><p>Read-only diagnostic for the D&amp;R Airlite on Donkey. No mixer commands will be sent.</p><section><button id="connect">Connect Airlite</button><button id="disconnect" disabled>Disconnect</button><button id="clear">Clear log</button><p id="status">Ready. Click Connect Airlite and choose the D&amp;R device.</p><p class="muted">Expected USB vendor 0805, product 1402. Chrome may block protected HID collections.</p></section><section><h2>Device details</h2><pre id="details">Not connected</pre></section><section><h2>Incoming button reports</h2><pre id="log">Waiting for data…</pre></section></main>
+<style>body{background:#07111e;color:#e9f3ff;font:16px system-ui;margin:0;padding:24px}main{max-width:900px;margin:auto}h1{color:#70d7ff}button{background:#1474a5;color:white;border:0;border-radius:8px;padding:13px 18px;font-weight:bold;cursor:pointer;margin:5px}button:disabled{opacity:.45}section{background:#10263a;border:1px solid #35536a;border-radius:12px;padding:18px;margin:18px 0}pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:400px;overflow:auto;background:#050e18;padding:14px;border-radius:8px}.muted{color:#a9bdce}a{color:#83d8ff}</style></head><body><main><p><a href="./">← Back to Bull'sHits Playout</a></p><h1>🎚 Airlite Hardware Tester</h1><p>Read-only diagnostic for the D&amp;R Airlite on Donkey. No mixer commands will be sent.</p><section><button id="connect">Connect Airlite</button><button id="disconnect" disabled>Disconnect</button><button id="clear">Clear log</button><button id="capture">Capture next change</button><p id="captureStatus">Capture idle</p><pre id="diff">No capture yet</pre><input id="label" placeholder="Button name, e.g. START 1"><button id="save">Save capture</button><button id="export">Export CSV</button><pre id="saved">No saved captures</pre><p id="status">Ready. Click Connect Airlite and choose the D&amp;R device.</p><p class="muted">Expected USB vendor 0805, product 1402. Chrome may block protected HID collections.</p></section><section><h2>Device details</h2><pre id="details">Not connected</pre></section><section><h2>Incoming button reports</h2><pre id="log">Waiting for data…</pre></section></main>
 <script>
 const vendorId=0x0805,productId=0x1402;
 const $=id=>document.getElementById(id);
-let device=null,lines=[];
+let device=null,lines=[],previous=new Map(),armed=false,last=null,saved=[];
 const hex=bytes=>Array.from(bytes,b=>b.toString(16).padStart(2,'0')).join(' ');
 function write(s){lines.unshift(new Date().toLocaleTimeString()+'  '+s);lines=lines.slice(0,150);$('log').textContent=lines.join('\n')}
 function status(s){$('status').textContent=s}
 function state(){ $('disconnect').disabled=!device?.opened }
-function report(e){const bytes=new Uint8Array(e.data.buffer,e.data.byteOffset,e.data.byteLength);write('Report '+e.reportId+' | '+hex(bytes))}
+function report(e){
+const b=Array.from(new Uint8Array(e.data.buffer,e.data.byteOffset,e.data.byteLength));
+const old=previous.get(e.reportId);previous.set(e.reportId,b);
+if(!armed||!old||old.length!==b.length)return;
+const changes=b.map((v,i)=>({byte:i+1,from:old[i],to:v})).filter(x=>x.from!==x.to);
+if(!changes.length)return;
+armed=false;last={time:new Date().toISOString(),report:e.reportId,changes,before:hex(old),after:hex(b)};
+$('diff').textContent='Report '+e.reportId+'\n'+changes.map(x=>'Byte '+x.byte+': '+x.from+' -> '+x.to).join('\n')+'\nBefore: '+last.before+'\nAfter: '+last.after;
+$('captureStatus').textContent='Captured! Label it and save, or capture another button.';
+write('Captured report '+e.reportId+': '+changes.map(x=>x.byte+' '+x.from+'->'+x.to).join(', '));
+}
 function closeEvent(e){if(device&&e.device===device){write('Device disconnected');device=null;status('Disconnected');state()}}
 if(!('hid' in navigator))status('WebHID unavailable in this browser or context.');
 else navigator.hid.addEventListener('disconnect',closeEvent);
@@ -27,4 +37,7 @@ status('Connected. Press one Airlite button and watch the report log.');write('C
 };
 $('disconnect').onclick=async()=>{if(device){device.removeEventListener('inputreport',report);if(device.opened)await device.close();device=null}status('Disconnected');state()};
 $('clear').onclick=()=>{lines=[];$('log').textContent='Waiting for data…'};
+$('capture').onclick=()=>{if(!device?.opened){status('Connect first');return}armed=true;$('captureStatus').textContent='ARMED: press ONE Airlite button';};
+$('save').onclick=()=>{if(!last)return;saved.push({...last,label:$('label').value||'Unlabelled'});$('saved').textContent=saved.map((s,i)=>(i+1)+'. '+s.label+' — report '+s.report+' — '+s.changes.map(x=>'byte '+x.byte+': '+x.from+' -> '+x.to).join(', ')).join('\n');};
+$('export').onclick=()=>{if(!saved.length)return;const q=s=>'"'+String(s).replaceAll('"','""')+'"';const rows=[['time','label','report','changes','before','after'],...saved.map(s=>[s.time,s.label,s.report,JSON.stringify(s.changes),s.before,s.after])];const blob=new Blob([rows.map(r=>r.map(q).join(',')).join('\r\n')],{type:'text/csv'});const u=URL.createObjectURL(blob),a=document.createElement('a');a.href=u;a.download='airlite-captures.csv';a.click();setTimeout(()=>URL.revokeObjectURL(u),1000);};
 </script></body></html>
