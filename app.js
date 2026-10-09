@@ -3,6 +3,7 @@ let lib=[],log=[],sel=null,play=-1;
 const A=$('deckA'),B=$('deckB');let deck=A;
 let activeBank=0, editingCart=null;
 const BANKS=4,SLOTS=16;
+let cartView='machines';
 const defaultColors=['#cb3b3b','#2466be','#d4831a','#209c58','#7c4dc2','#4a5c70'];
 let cartBanks=JSON.parse(localStorage.getItem('eldoret-cart-banks')||'null')||Array.from({length:BANKS},()=>Array.from({length:SLOTS},()=>null));
 const cartPlayers={};
@@ -43,7 +44,7 @@ $('loadSchedule').onclick=()=>{const s=localStorage.getItem('eldoret-demo');if(s
 
 function getCart(slot){return cartBanks[activeBank][slot]}
 function assignCart(slot,libId){const x=lib.find(v=>v.id===libId);if(!x)return;cartBanks[activeBank][slot]={libId,name:x.title,color:defaultColors[slot%defaultColors.length],loop:false};saveCarts();renderCarts()}
-function renderCarts(){const root=$('carts');root.innerHTML='';for(let i=0;i<SLOTS;i++){const cfg=getCart(i),src=cfg&&lib.find(v=>v.id===cfg.libId);const b=document.createElement('button');b.className='cart';b.dataset.slot=i;b.style.background=cfg?.color||defaultColors[i%defaultColors.length];const player=cartPlayers[activeBank+'-'+i];const playing=player&&!player.paused;b.classList.toggle('playing',!!playing);b.innerHTML='<span class="cartMachine">SONIFEX <i>ELDORET</i></span><span class="cartName">'+(cfg?.name||('CART '+(i+1)))+'</span><span class="cartTime">'+(src?mm(playing?(cartCountDown?Math.max(0,(src.dur||player.duration||0)-player.currentTime):player.currentTime):(cartCountDown?src.dur:0)):'--:--')+'</span><span class="cartState">'+(playing?'ON AIR':src?'READY':'EMPTY')+'</span><span class="cartLamp">▶</span>';b.ondragover=e=>{e.preventDefault();b.classList.add('dragover')};b.ondragleave=()=>b.classList.remove('dragover');b.ondrop=e=>{e.preventDefault();b.classList.remove('dragover');assignCart(i,e.dataTransfer.getData('text/plain'))};b.onclick=()=>toggleCart(i);b.oncontextmenu=e=>{e.preventDefault();openCartEditor(i)};root.appendChild(b)}}
+function renderCarts(){const root=$('carts');root.innerHTML='';for(let i=0;i<(cartView==='machines'?3:SLOTS);i++){const cfg=getCart(i),src=cfg&&lib.find(v=>v.id===cfg.libId);const b=document.createElement('button');b.className='cart';b.dataset.slot=i;b.style.background=cfg?.color||defaultColors[i%defaultColors.length];const player=cartPlayers[activeBank+'-'+i];const playing=player&&!player.paused;b.classList.toggle('playing',!!playing);b.innerHTML='<span class="cartMachine">SONIFEX <i>ELDORET</i></span><span class="cartName">'+(cfg?.name||('CART '+(i+1)))+'</span><span class="cartTime">'+(src?mm(playing?(cartCountDown?Math.max(0,(src.dur||player.duration||0)-player.currentTime):player.currentTime):(cartCountDown?src.dur:0)):'--:--')+'</span><span class="cartState">'+(playing?'ON AIR':src?'READY':'EMPTY')+'</span><span class="cartLamp">▶</span>';b.ondragover=e=>{e.preventDefault();b.classList.add('dragover')};b.ondragleave=()=>b.classList.remove('dragover');b.ondrop=e=>{e.preventDefault();b.classList.remove('dragover');assignCart(i,e.dataTransfer.getData('text/plain'))};b.onclick=()=>toggleCart(i);b.oncontextmenu=e=>{e.preventDefault();openCartEditor(i)};root.appendChild(b)}}
 function toggleCart(slot){const key=activeBank+'-'+slot,cfg=getCart(slot),src=cfg&&lib.find(v=>v.id===cfg.libId);if(!src)return toast('Drag audio from the library onto this cart');const old=cartPlayers[key];if(old&&!old.paused){old.pause();old.currentTime=0;renderCarts();return}const a=new Audio(src.url);a.loop=!!cfg.loop;cartPlayers[key]=a;window.eldoretMeterRegister?.(a);a.ontimeupdate=renderCarts;a.onended=renderCarts;a.play();renderCarts()}
 function openCartEditor(slot){editingCart=slot;const cfg=getCart(slot)||{};$('cartName').value=cfg.name||('CART '+(slot+1));$('cartColor').value=cfg.color||defaultColors[slot%defaultColors.length];$('cartLoop').checked=!!cfg.loop;$('cartModal').classList.remove('hidden')}
 $('cartCancel').onclick=()=>$('cartModal').classList.add('hidden');
@@ -196,3 +197,8 @@ setTimeout(enableSpotifyScheduleDrop,0);
 
 // Switch between elapsed and remaining time on cart LED counters.
 document.getElementById('cartCounterMode').onclick=()=>{cartCountDown=!cartCountDown;document.getElementById('cartCounterMode').textContent=cartCountDown?'COUNT DOWN':'COUNT UP';renderCarts()};
+
+// Three physical-style carts or a full hotkey pad, sharing four existing banks.
+const cartTabs=document.getElementById('cartViewTabs');
+cartTabs?.querySelectorAll('button').forEach(btn=>btn.onclick=()=>{cartView=btn.dataset.view;cartTabs.querySelectorAll('button').forEach(x=>x.classList.toggle('active',x===btn));document.getElementById('carts').classList.toggle('machineView',cartView==='machines');document.getElementById('carts').classList.toggle('hotkeyView',cartView==='hotkeys');renderCarts()});
+document.getElementById('carts').classList.add('machineView');
