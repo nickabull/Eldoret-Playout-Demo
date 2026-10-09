@@ -22,7 +22,23 @@ function linkSpotifyAudio(){
 }
 const saveCarts=()=>localStorage.setItem('eldoret-cart-banks',JSON.stringify(cartBanks));
 function row(x,i){const d=document.createElement('div');d.className='row '+x.type+(i===play?' playing':'')+(x.id===sel?' selected':'');d.draggable=true;d.innerHTML='<div>'+(i===play?'▶':i+1)+'</div><div>--:--</div><div><span class="pill '+x.type+'">'+x.type.toUpperCase()+'</span></div><div><b>'+x.title+'</b><br><small>'+x.artist+'</small><span class="cacheBadge"></span></div><div>'+mm(x.dur)+'</div><div>'+mm(x.intro)+'</div><div>'+mm(x.segue||0)+'</div><div>--:--</div>';d.onclick=()=>{sel=x.id;render();edit()};d.dataset.id=x.id;d.ondragstart=e=>{window.drag=i;e.dataTransfer.setData('application/x-eldoret-row',String(i))};d.ondragover=e=>{e.preventDefault()};d.ondrop=e=>{const raw=e.dataTransfer.getData('application/x-eldoret-spotify');if(raw){e.preventDefault();e.stopPropagation();try{addSpotifyReference(JSON.parse(raw),i)}catch{}return}e.preventDefault();e.stopPropagation();if(Number.isInteger(window.drag)){const [m]=log.splice(window.drag,1);log.splice(i,0,m);render()}};return d}
-function render(){window.bullCacheQueue?.(log.filter(x=>x.url).slice(Math.max(0,play+1),Math.max(0,play+1)+2));const r=$('schedule');r.innerHTML='';log.forEach((x,i)=>r.appendChild(row(x,i)));window.bullCacheMark?.();const p=log[play],n=log[play<0?0:play+1];$('nowTitle').textContent=p?.title||'Stopped';$('nowArtist').textContent=p?.artist||'Import audio to begin';$('nextTitle').textContent=n?.title||'Nothing queued';$('nextArtist').textContent=n?.artist||'—';$('nextDuration').textContent=n?mm(n.dur):'00:00'}
+function render(){window.bullCacheQueue?.(log.filter(x=>x.url).slice(Math.max(0,play+1),Math.max(0,play+1)+2));const r=$('schedule');r.innerHTML='';log.forEach((x,i)=>r.appendChild(row(x,i)));window.bullCacheMark?.();const p=log[play],n=log[play<0?0:play+1];$('nowTitle').textContent=p?.title||'Stopped';$('nowArtist').textContent=p?.artist||'Import audio to begin';$('nextTitle').textContent=n?.title||'Nothing queued';$('nextArtist').textContent=n?.artist||'—';$('nextDuration').textContent=n?mm(n.dur):'00:00';updateDeckDisplay()}
+function updateDeckDisplay(){
+ const playing=play>=0&&!deck.paused;
+ const current=deck===A?'A':'B',next=deck===A?'B':'A';
+ const now=document.querySelector('.deckhead .now'),up=document.querySelector('.deckhead .next');
+ if(now)now.textContent='DECK '+current+' · '+(playing?'ON AIR':'STOPPED');
+ if(up)up.textContent='DECK '+next+' · NEXT (NOT LOADED)';
+ const remain=$('remain');
+ if(remain){
+  const d=Number.isFinite(deck.duration)&&deck.duration>0?deck.duration:(log[play]?.dur||0);
+  const left=Math.max(0,d-(deck.currentTime||0));
+  remain.textContent=play<0?'00:00':mm(left);
+  remain.style.color=playing&&left<=10?'#ff6473':'#e3f1fc';
+ }
+ const cue=$('nowCue');if(cue)cue.textContent=play<0?'Cue 00:00':'Elapsed '+mm(deck.currentTime||0);
+}
+[A,B].forEach(a=>{a.addEventListener('timeupdate',updateDeckDisplay);a.addEventListener('loadedmetadata',updateDeckDisplay);a.addEventListener('play',updateDeckDisplay);a.addEventListener('pause',updateDeckDisplay);a.addEventListener('ended',updateDeckDisplay)});
 function edit(){const x=log.find(v=>v.id===sel);$('emptyEditor').hidden=!!x;$('editorForm').hidden=!x;if(!x)return;$('eTitle').value=x.title;$('eArtist').value=x.artist;$('eDur').value=mm(x.dur);$('eType').value=x.type;$('eIntro').value=mm(x.intro);$('eCue').value=mm(x.cue);$('eSegue').value=mm(x.segue||0);$('eFade').value=mm(x.fade);$('eFixed').value=x.fixed||''}
 function parse(t){const p=t.split(':').map(Number);return (p[0]||0)*60+(p[1]||0)}
 function update(){const x=log.find(v=>v.id===sel);if(!x)return;x.title=$('eTitle').value;x.artist=$('eArtist').value;x.dur=parse($('eDur').value);x.type=$('eType').value;x.intro=parse($('eIntro').value);x.cue=parse($('eCue').value);x.segue=parse($('eSegue').value);x.fade=parse($('eFade').value);x.fixed=$('eFixed').value;render()}
