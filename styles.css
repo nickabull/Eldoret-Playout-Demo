@@ -129,3 +129,12 @@
 .sonifexFace .sfStatus{grid-column:3;grid-row:3;font:800 8px Arial;text-align:center;color:#33433e}
 .sonifexFace.playing .sfStatus{color:#08763e}
 @media(max-width:850px){#carts.machineView .cart.sonifexFace{grid-template-columns:minmax(0,1fr) 30px 30px!important;gap:2px!important;padding:4px!important}.sonifexFace .sfStop span,.sonifexFace .sfPlay span,.sonifexFace .sfFast span{width:25px}.sonifexFace .sfLogo strong{font-size:10px}.sonifexFace .sfTime .cartTime{font-size:9px!important}}
+
+/* v0.6.7 translucent blue Sonifex cart inserts */
+.sonifexFace .sfCassette{display:none;position:absolute;inset:2px 5px 2px 5px;z-index:2;border:1px solid #82d7f5;border-bottom:3px solid #145d96;border-radius:3px;background:linear-gradient(165deg,#6fd8ffdd 0%,#136ebbc9 25%,#074c9fdf 70%,#04356dcf 100%);box-shadow:inset 0 1px 2px #c1f5ff,0 1px 5px #000b;overflow:hidden}
+.sonifexFace.loaded .sfCassette{display:block}
+.sonifexFace .sfCassette:before,.sonifexFace .sfCassette:after{content:'';position:absolute;width:16px;height:16px;top:5px;border:2px solid #b7e8ff66;border-radius:50%;background:radial-gradient(circle,#092f62 0 3px,#5db3df99 4px 5px,#154b87 6px 8px);opacity:.8}
+.sonifexFace .sfCassette:before{left:10%}.sonifexFace .sfCassette:after{right:10%}
+.sonifexFace .sfCassetteLabel{position:absolute;z-index:3;left:4%;right:4%;top:2px;min-height:16px;padding:2px 3px;background:linear-gradient(#d8f1ff,#9bc9e6);color:#07325c;border:1px solid #d7f4ff;font:bold 10px Consolas,monospace;letter-spacing:.03em;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;box-shadow:0 1px 2px #001a38}
+.sonifexFace .sfCassetteReel{position:absolute;bottom:-4px;left:48%;font-size:18px;color:#a1dafa66}
+.sonifexFace.playing .sfCassette{box-shadow:inset 0 1px 2px #c1f5ff,0 0 7px #28c7ff99}
