@@ -85,3 +85,6 @@
 #carts.hotkeyView{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:5px}
 #carts.hotkeyView .cart{min-height:58px}
 @media(max-width:650px){#carts.machineView .cart{grid-template-columns:minmax(0,1fr) 77px 30px;gap:3px 5px;padding:6px}#carts.machineView .cartTime{font-size:15px}#carts.machineView .cartName{font-size:11px}#carts.hotkeyView{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+#loadDemoLibrary{display:block;width:100%;margin:7px 0 10px;background:#186a4c;color:#fff;border:1px solid #39ac79;border-radius:5px;padding:10px;font-size:12px;font-weight:800;letter-spacing:.04em;cursor:pointer}
+#loadDemoLibrary:disabled{opacity:.7}
