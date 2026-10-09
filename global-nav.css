@@ -10,3 +10,7 @@ body:has(#bullGlobalNav)>.layout{height:calc(100vh - 39px - 48px)!important}
 body:has(#bullGlobalNav){min-height:0}
 body:has(#bullGlobalNav)>header{min-height:0}
 @media(max-width:800px){#bullGlobalNav a{min-width:105px;flex:0 0 105px}}
+
+/* v0.6.40: breathing room between tab icons and labels */
+#bullGlobalNav a{gap:9px!important;padding-left:11px!important;padding-right:11px!important}
+#bullGlobalNav .bullNavIcon{display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto;min-width:15px;font-size:14px;line-height:1}
