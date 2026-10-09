@@ -1,7 +1,7 @@
 /* Fader C hotbox - independent browser preview channel, v0.5.2 */
 (()=>{
  const panel=document.getElementById('hotbox');if(!panel)return;
- const audio=new Audio();audio.preload='auto';
+ const audio=new Audio();audio.preload='auto';window.eldoretMeterRegister?.(audio);
  let loaded=null,playing=false;
  const name=document.getElementById('hotTitle'),detail=document.getElementById('hotDetail'),playBtn=document.getElementById('hotPlay'),stopBtn=document.getElementById('hotStop'),clearBtn=document.getElementById('hotClear');
  function state(){name.textContent=loaded?.title||'Drop audio here';detail.textContent=loaded?(loaded.artist||'')+(loaded.url?' · READY':' · AUDIO MISSING'):'From library, playlist or Fader D carts';playBtn.disabled=!loaded?.url;playBtn.textContent=playing?'❚❚ PAUSE':'▶ PLAY';panel.classList.toggle('hotPlaying',playing)}
