@@ -158,3 +158,7 @@
 .sonifexFace .sfCassetteLabel{top:4px!important;left:2%!important;right:2%!important;background:linear-gradient(#f3f7f9,#c5e4f4)!important;color:#0b2854!important;border:1px solid #f8fbff!important;font:900 9px Consolas,monospace!important;letter-spacing:.12em!important}
 .sonifexFace .sfTitle{font:700 9px Arial,sans-serif!important}
 @media(max-width:850px){#carts.machineView .cart.sonifexFace{grid-template-columns:minmax(0,1fr) 29px 29px!important;gap:2px!important}.sonifexFace .sfStop span,.sonifexFace .sfPlay span,.sonifexFace .sfFast span{width:25px!important;height:23px!important}.sonifexFace .sfLogo strong{font-size:10px!important}}
+
+/* Cart timer: no caption, no overlap with STOP button */
+.sonifexFace .sfTime{align-self:stretch!important;justify-content:center!important;min-width:0!important;overflow:hidden!important;padding:0 2px!important;box-sizing:border-box!important}
+.sonifexFace .sfTime .cartTime{box-sizing:border-box!important;display:block!important;width:100%!important;max-width:100%!important;min-width:0!important;font-size:10px!important;letter-spacing:-.09em!important;padding:4px 0!important;white-space:nowrap!important;overflow:hidden!important}
