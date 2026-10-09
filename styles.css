@@ -70,3 +70,18 @@
 #vtRecord{background:#a52a35;color:white}#vtSave{background:#168352;color:white}
 #vtMessage{font-size:12px;color:#c1d5e7;margin-top:14px}
 @media(max-width:700px){.vtFields{grid-template-columns:1fr}.vtCard{padding:12px}}
+
+/* v0.5.6: three full-width Sonifex cartridges or hotkey grid */
+#cartViewTabs{display:flex;gap:5px}
+#cartViewTabs button{font-size:10px;border:1px solid #526b7e;background:#172838;color:#c5d7e4;padding:5px 9px;border-radius:4px}
+#cartViewTabs button.active{background:#a4352f;color:#fff4e2;border-color:#d37b64}
+#carts.machineView{display:grid;grid-template-columns:1fr;gap:8px}
+#carts.machineView .cart{min-height:85px;grid-template-columns:minmax(0,1fr) 110px 48px;grid-template-rows:17px 1fr 16px;padding:8px 13px;gap:3px 12px}
+#carts.machineView .cartMachine{font-size:12px}
+#carts.machineView .cartName{font-size:15px;padding:9px 12px}
+#carts.machineView .cartTime{font-size:21px;text-align:center}
+#carts.machineView .cartLamp{font-size:20px;padding:11px 9px}
+#carts.machineView .cartState{font-size:10px}
+#carts.hotkeyView{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:5px}
+#carts.hotkeyView .cart{min-height:58px}
+@media(max-width:650px){#carts.machineView .cart{grid-template-columns:minmax(0,1fr) 77px 30px;gap:3px 5px;padding:6px}#carts.machineView .cartTime{font-size:15px}#carts.machineView .cartName{font-size:11px}#carts.hotkeyView{grid-template-columns:repeat(2,minmax(0,1fr))}}
