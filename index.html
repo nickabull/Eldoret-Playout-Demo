@@ -114,5 +114,39 @@
 <script src="hotbox.js?v=0.6.45"></script>
 <script src="voice-track.js?v=0.6.45"></script>
 <script src="demo-library.js?v=0.6.45"></script>
-<script src="cut-cards.js?v=0.6.45"></script><script src="library-access.js?v=0.6.45"></script><script src="desk-layout.js?v=0.6.45"></script></body>
+<script src="cut-cards.js?v=0.6.45"></script><script src="library-access.js?v=0.6.45"></script><script src="desk-layout.js?v=0.6.45"></script><script>
+/* Experimental Airlite CH4 fader start: opt-in, local to this browser tab. */
+(()=>{'use strict';
+const bar=document.createElement('div');
+bar.style.cssText='position:fixed;right:12px;bottom:58px;z-index:9998;background:#10263b;color:#eaf6ff;border:1px solid #5c93b4;border-radius:9px;padding:9px 12px;font:12px Arial;box-shadow:0 5px 18px #0008';
+bar.innerHTML='<strong>AIRLITE CH4 TEST</strong> <button id="airliteTestConnect" style="margin-left:8px;padding:6px">CONNECT</button> <label style="margin-left:8px"><input id="airliteTestArm" type="checkbox" disabled> ARM FADER START</label> <span id="airliteTestStatus" style="margin-left:8px">Disconnected</span>';
+document.body.append(bar);
+let device=null,previous=null;
+const status=bar.querySelector('#airliteTestStatus'),arm=bar.querySelector('#airliteTestArm'),connect=bar.querySelector('#airliteTestConnect');
+function report(e){
+ const raw=Array.from(new Uint8Array(e.data.buffer,e.data.byteOffset,e.data.byteLength));
+ const bytes=(raw[0]===10||raw[0]===8)?raw:[e.reportId,...raw];
+ if(bytes[0]!==10||bytes[1]!==224||bytes.length<10)return;
+ const next=bytes[5]===1;if(bytes[5]!==0&&bytes[5]!==1)return;
+ status.textContent='CH4 '+(next?'ON':'OFF')+(arm.checked?' · armed':' · disarmed');
+ if(previous===false&&next&&arm.checked){
+   const play=document.getElementById('playBtn');
+   if(play){play.click();status.textContent='CH4 ON → PLAY command sent';}
+ }
+ previous=next;
+}
+connect.onclick=async()=>{
+ if(!navigator.hid){status.textContent='WebHID unavailable';return}
+ try{
+  const found=await navigator.hid.requestDevice({filters:[{vendorId:0x0805,productId:0x1402}]});
+  if(!found.length)return;
+  if(device)device.removeEventListener('inputreport',report);
+  device=found[0];if(!device.opened)await device.open();
+  device.addEventListener('inputreport',report);previous=null;arm.disabled=false;
+  status.textContent='Connected · disarmed';connect.textContent='RECONNECT';
+ }catch(err){status.textContent='Connection failed: '+err.message}
+};
+})();
+</script>
+</body>
 </html>
