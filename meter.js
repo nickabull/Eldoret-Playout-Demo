@@ -15,6 +15,8 @@
   catch(e){console.warn('Eldoret meter source',e)}
  }
  window.eldoretMeterRegister=register;
+ window.bullResumeAudio=async()=>{if(!init())throw Error('Audio engine unavailable');if(ctx.state!=='running')await ctx.resume();if(ctx.state!=='running')throw Error('Audio engine '+ctx.state);return ctx.state};
+ window.bullAudioEngineState=()=>ctx?.state||'not initialized';
  document.addEventListener('pointerdown',()=>{if(ctx?.state==='suspended')ctx.resume().catch(()=>{})},{passive:true});
  register(document.getElementById('deckA'));register(document.getElementById('deckB'));
  const left=new Float32Array(2048),right=new Float32Array(2048);
