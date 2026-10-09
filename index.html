@@ -148,5 +148,44 @@ connect.onclick=async()=>{
 };
 })();
 </script>
+<script>
+/* Browser audio output routing diagnostic: separate sink selection per playout deck. */
+(()=>{'use strict';
+const panel=document.createElement('section');
+panel.id='bullAudioRouting';
+panel.style.cssText='position:fixed;left:12px;bottom:58px;z-index:9997;width:min(480px,calc(100vw - 24px));max-height:55vh;overflow:auto;background:#10263b;color:#eaf6ff;border:1px solid #5c93b4;border-radius:9px;padding:12px;font:12px Arial;box-shadow:0 5px 18px #0008';
+panel.innerHTML='<div style="display:flex;justify-content:space-between;align-items:center"><strong>🎚 AUDIO ROUTING · EXPERIMENTAL</strong><button id="routeToggle" style="padding:5px">HIDE</button></div><div id="routeBody"><p>Choose independent browser audio outputs for software Deck A and Deck B. This does not automatically assign Airlite hardware faders.</p><button id="routeScan" style="padding:6px">SCAN AUDIO OUTPUTS</button><div style="margin-top:8px">Deck A <select id="routeA" style="max-width:85%;padding:5px"></select></div><div style="margin-top:8px">Deck B <select id="routeB" style="max-width:85%;padding:5px"></select></div><p id="routeStatus">Outputs not scanned yet.</p></div>';
+document.body.append(panel);
+const $=id=>document.getElementById(id),A=$('deckA'),B=$('deckB'),status=$('routeStatus');
+const toggle=$('routeToggle'),body=$('routeBody');
+toggle.onclick=()=>{const hidden=body.hidden;body.hidden=!hidden;toggle.textContent=hidden?'HIDE':'SHOW'};
+async function scan(){
+ if(!navigator.mediaDevices?.enumerateDevices){status.textContent='Audio device enumeration unavailable in this browser';return}
+ try{
+  const list=await navigator.mediaDevices.enumerateDevices();
+  const outputs=list.filter(d=>d.kind==='audiooutput');
+  for(const id of ['routeA','routeB']){
+   const select=$(id),previous=select.value;select.innerHTML='';
+   const def=document.createElement('option');def.value='';def.textContent='System default output';select.append(def);
+   outputs.forEach((d,i)=>{const opt=document.createElement('option');opt.value=d.deviceId;opt.textContent=d.label||'Audio output '+(i+1);select.append(opt)});
+   if([...select.options].some(o=>o.value===previous))select.value=previous;
+  }
+  status.textContent=outputs.length+' browser audio output(s) found. Distinct devices are required for independent routing.';
+ }catch(e){status.textContent='Scan failed: '+e.message}
+}
+async function apply(which){
+ const audio=which==='A'?A:B,select=$('route'+which);
+ if(typeof audio.setSinkId!=='function'){status.textContent='This Chromium build does not support per-player output selection (setSinkId).';return}
+ try{
+  await audio.setSinkId(select.value);
+  status.textContent='Deck '+which+' output selected: '+select.options[select.selectedIndex].text+'. Other deck unchanged.';
+ }catch(e){status.textContent='Deck '+which+' routing failed: '+e.message}
+}
+$('routeScan').onclick=scan;
+$('routeA').onchange=()=>apply('A');
+$('routeB').onchange=()=>apply('B');
+scan();
+})();
+</script>
 </body>
 </html>
