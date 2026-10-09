@@ -174,3 +174,9 @@
 #deskNpArtist{display:block;font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
 .deskNpFoot{font-size:9px;color:#95c9ae}
 .hiddenMeter{position:absolute!important;width:1px!important;height:1px!important;overflow:hidden!important;opacity:0!important;pointer-events:none!important;right:0;bottom:0}.hiddenMeter canvas{width:1px!important;height:1px!important}
+
+/* v0.6.16: let Now Playing occupy the full top-right panel. Keep backtime DOM hidden for existing JS. */
+.top .back{display:flex!important;align-items:stretch!important;padding:6px 8px!important;gap:0!important;min-width:0!important}
+.top .back .backTiming{display:none!important}
+.top .back .deskNowPlaying{flex:1 1 100%!important;width:100%!important;min-width:0!important;max-width:none!important;align-self:stretch!important;padding:6px 13px!important}
+.top .back #deskNpTitle{font-size:clamp(15px,1.6vw,23px)!important}
