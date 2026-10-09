@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Airlite Button Monitor</title>
+<style>body{margin:0;padding:22px;background:#07111e;color:#eaf5ff;font:16px system-ui}main{max-width:1000px;margin:auto}h1{color:#73d6ff}section{background:#10283d;border:1px solid #355773;border-radius:12px;padding:16px;margin:16px 0}button{border:0;border-radius:8px;padding:12px 16px;background:#137cae;color:white;font-weight:700;cursor:pointer;margin:4px}button:disabled{opacity:.4}input{padding:11px;border-radius:7px;border:1px solid #69879b;background:#eaf4fc;color:#102235;max-width:90%}pre{background:#061321;padding:12px;border-radius:8px;white-space:pre-wrap;overflow-wrap:anywhere;max-height:500px;overflow:auto}a{color:#80d9ff}.muted{color:#acc2d2}.ok{color:#72ecad}</style></head><body><main>
+<p><a href="./">← Bull'sHits Playout</a> · <a href="airlite-test.html">Original tester</a></p>
+<h1>🎚 Airlite Button Monitor v2</h1><p>Read-only WebHID recording. Captures <b>every incoming report</b> during a labelled test, not just the first one. Nothing is sent to the mixer.</p>
+<section><button id="connect">Connect Airlite</button><button id="disconnect" disabled>Disconnect</button><p id="status">Not connected</p></section>
+<section><h2>1. Record one control</h2><p>Leave the desk untouched, type a label, then start recording. Press ON, wait a second, press OFF, then stop. You can also record ON and OFF separately.</p>
+<input id="label" placeholder="e.g. Fader 3 ON then OFF" size="34">
+<button id="start" disabled>● Start recording</button><button id="stop" disabled>■ Stop recording</button>
+<p id="recordState" class="muted">Ready</p><p id="count">0 reports</p></section>
+<section><h2>2. Recorded sequences</h2><button id="download" disabled>Download all as JSON</button><button id="csv" disabled>Download CSV</button><button id="clear">Clear recordings</button>
+<pre id="sequences">No sequences yet</pre></section>
+<section><h2>Live report stream</h2><p class="muted">Only shows messages while recording. Relative times in milliseconds.</p><pre id="live">Waiting…</pre></section>
+<script>
+const $=id=>document.getElementById(id),hex=b=>Array.from(b,x=>x.toString(16).padStart(2,'0')).join(' ');
+let device=null,active=null,sessions=[],lastById=new Map(),startTime=0,liveLines=[];
+function status(s){$('status').textContent=s}
+function controls(){$('disconnect').disabled=!device?.opened;$('start').disabled=!device?.opened||!!active;$('stop').disabled=!active;$('download').disabled=$('csv').disabled=!sessions.length}
+function summarize(){ $('sequences').textContent=sessions.length?sessions.map((s,i)=>'#'+(i+1)+' '+s.label+' ('+s.events.length+' reports)\n'+s.events.map(e=>'  +'+e.ms+'ms | report '+e.id+' | '+e.hex+' | '+e.changes.map(c=>'byte '+c.byte+': '+c.from+'→'+c.to).join(', ')).join('\n')).join('\n\n'):'No sequences yet';controls()}
+function report(e){if(!active)return;const b=Array.from(new Uint8Array(e.data.buffer,e.data.byteOffset,e.data.byteLength));const prev=lastById.get(e.reportId);const changes=prev&&prev.length===b.length?b.map((v,i)=>({byte:i+1,from:prev[i],to:v})).filter(c=>c.from!==c.to):[];lastById.set(e.reportId,b);
+const item={ms:Math.round(performance.now()-startTime),id:e.reportId,hex:hex(b),changes};if(active.events.length>=2000){stopRecording('Stopped at 2000 reports for safety');return}active.events.push(item);liveLines.push('+'+item.ms+'ms | '+item.id+' | '+item.hex+(changes.length?' | '+changes.map(c=>c.byte+':'+c.from+'>'+c.to).join(' '):''));$('live').textContent=liveLines.slice(-80).join('\n');$('count').textContent=active.events.length+' reports captured';}
+function stopRecording(reason){if(!active)return;active.finished=new Date().toISOString();sessions.push(active);active=null;$('recordState').textContent=reason||'Recording saved. Start another test or download the results.';summarize()}
+$('connect').onclick=async()=>{if(!navigator.hid){status('WebHID unavailable');return}try{const selected=await navigator.hid.requestDevice({filters:[{vendorId:0x0805,productId:0x1402}]});if(!selected.length)return;if(device?.opened){device.removeEventListener('inputreport',report);await device.close()}device=selected[0];await device.open();device.addEventListener('inputreport',report);status('Connected to '+device.productName+' — ready to record');controls()}catch(err){status(err.name+': '+err.message)}};
+$('disconnect').onclick=async()=>{stopRecording('Device disconnected; partial recording saved');if(device){device.removeEventListener('inputreport',report);if(device.opened)await device.close();device=null}status('Disconnected');controls()};
+if(navigator.hid)navigator.hid.addEventListener('disconnect',e=>{if(device===e.device){stopRecording('USB disconnected; partial recording saved');device=null;status('USB disconnected');controls()}});
+$('start').onclick=()=>{if(!device?.opened||active)return;lastById.clear();liveLines=[];$('live').textContent='Waiting for first report…';active={label:$('label').value.trim()||'Unnamed control',started:new Date().toISOString(),events:[]};startTime=performance.now();$('recordState').textContent='● RECORDING — operate the labelled control, then press Stop';$('count').textContent='0 reports';controls()};
+$('stop').onclick=()=>stopRecording();
+$('clear').onclick=()=>{if(active){$('recordState').textContent='Stop recording before clearing';return}sessions=[];summarize();$('live').textContent='Waiting…'};
+function download(name,body,type){const url=URL.createObjectURL(new Blob([body],{type}));const a=document.createElement('a');a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),1500)}
+$('download').onclick=()=>download('airlite-sequences.json',JSON.stringify({device:'D&R Airlite',sessions},null,2),'application/json');
+$('csv').onclick=()=>{const q=s=>'"'+String(s).replaceAll('"','""')+'"';const rows=[['label','started','ms','report_id','hex','changed_bytes'],...sessions.flatMap(s=>s.events.map(e=>[s.label,s.started,e.ms,e.id,e.hex,e.changes.map(c=>c.byte+':'+c.from+'>'+c.to).join(';')]))];download('airlite-sequences.csv',rows.map(r=>r.map(q).join(',')).join('\r\n'),'text/csv')};
+controls();
+</script></main></body></html>
