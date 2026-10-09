@@ -1,0 +1,11 @@
+/* Bull'sHits offline safety cache: first two queued playable cuts in IndexedDB. */
+(()=>{'use strict';const DB='bullshits-playout-safety-v1',STORE='cuts';let busy=false,last='',urls=new Map();
+function open(){return new Promise((ok,no)=>{const r=indexedDB.open(DB,1);r.onupgradeneeded=()=>r.result.createObjectStore(STORE,{keyPath:'id'});r.onsuccess=()=>ok(r.result);r.onerror=()=>no(r.error)})}
+async function get(id){const db=await open();return new Promise((ok,no)=>{const tx=db.transaction(STORE,'readonly'),r=tx.objectStore(STORE).get(id);r.onsuccess=()=>{db.close();ok(r.result)};r.onerror=()=>{db.close();no(r.error)}})}
+async function replace(items){const db=await open();return new Promise((ok,no)=>{const tx=db.transaction(STORE,'readwrite'),store=tx.objectStore(STORE);store.clear();items.forEach(x=>store.put(x));tx.oncomplete=()=>{db.close();ok()};tx.onerror=()=>{db.close();no(tx.error)}})}
+const status=(s)=>{const el=document.getElementById('safetyCacheStatus');if(el)el.textContent=s};
+async function cache(queue){if(busy)return;const first=queue.slice(0,2),sig=first.map(x=>x.id+'|'+x.url).join(';');if(sig===last)return;busy=true;status('CACHE: PREPARING');try{const items=[];for(const x of first){if(!x.url)continue;try{const response=await fetch(x.url);if(!response.ok)throw Error('HTTP '+response.status);const blob=await response.blob();if(!blob.size)throw Error('Empty audio');items.push({id:x.id,title:x.title,artist:x.artist,blob})}catch(e){console.warn('Safety cache skipped:',x.title,e)}}await replace(items);last=sig;status('CACHE: '+items.length+'/2 READY'+(items.length<2?' · CHECK AUDIO':''))}catch(e){console.warn('Safety cache error',e);status('CACHE: UNAVAILABLE')}finally{busy=false}}
+window.bullCacheQueue=(queue)=>{clearTimeout(window.__bullCacheTimer);window.__bullCacheTimer=setTimeout(()=>cache(queue),450)};
+window.bullCachedAudio=async(item)=>{if(item.url&&item.url.startsWith('blob:'))return item.url;try{const x=await get(item.id);if(!x)return item.url||null;if(!urls.has(item.id))urls.set(item.id,URL.createObjectURL(x.blob));return urls.get(item.id)}catch{return item.url||null}};
+window.bullCacheStatus=status;
+})();
