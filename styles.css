@@ -100,3 +100,11 @@
 #carts.machineView .cartState{grid-column:1/4;grid-row:3;font-size:9px!important;color:#edf4f3!important;text-shadow:0 1px #172126;letter-spacing:.12em}
 #carts.hotkeyView{min-height:105px}
 @media(max-width:650px){#carts.machineView{gap:3px!important}#carts.machineView .cart{height:92px!important;min-height:92px!important;padding:4px!important;grid-template-columns:minmax(0,1fr) 37px 17px!important;gap:2px!important}#carts.machineView .cartMachine{font-size:7px!important;letter-spacing:0!important}#carts.machineView .cartMachine i{display:none}#carts.machineView .cartName{font-size:9px!important;padding:2px!important}#carts.machineView .cartTime{font-size:9px!important;padding:3px 0!important}#carts.machineView .cartState{font-size:7px!important}#carts.machineView .cartLamp{font-size:9px!important}}
+
+/* v0.6.4: navigation is outside the fixed-height playout grid; keep Sonifex row visible */
+.bullNav{height:32px;min-height:32px;box-sizing:border-box;white-space:nowrap;overflow-x:auto;overflow-y:hidden;display:flex;align-items:center;gap:12px!important;padding:5px 12px!important}
+.app{height:calc(100vh - 32px)!important;min-height:0}
+.cartbox{min-height:0;overflow:hidden}
+.cartbox>.cartHead{display:flex;flex-wrap:wrap;gap:5px 8px;align-items:center;grid-template-columns:none}
+.cartbox>#carts.machineView{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important}
+.cartbox .routingNote{font-size:10px}
