@@ -1,0 +1,12 @@
+/* Shared fixed-order navigation for all Bull'sHits screens. */
+#bullGlobalNav{height:39px;min-height:39px;flex:0 0 39px;display:flex;align-items:center;gap:5px;padding:4px 8px;background:#172e42;border-bottom:1px solid #456078;overflow-x:auto;overflow-y:hidden;white-space:nowrap;scrollbar-width:thin;position:relative;z-index:1000;font:700 11px Segoe UI,Arial,sans-serif}
+#bullGlobalNav a{display:flex;flex:1 0 0;min-width:100px;max-width:170px;height:28px;align-items:center;justify-content:center;padding:0 9px;border:1px solid #42617a;border-radius:5px;background:#213d53;color:#c8eaff;text-decoration:none;box-sizing:border-box}
+#bullGlobalNav a[aria-current="page"]{background:#16674d;border-color:#70cda1;color:white}
+#bullGlobalNav a:hover{background:#315975}
+#bullGlobalNav #safetyCacheStatus{flex:0 0 auto;margin-left:7px;color:#a6f5ca;font-size:10px}
+body:has(#bullGlobalNav)>.bullNav{display:none!important}
+body:has(#bullGlobalNav)>.app{height:calc(100vh - 39px)!important}
+body:has(#bullGlobalNav)>.layout{height:calc(100vh - 39px - 48px)!important}
+body:has(#bullGlobalNav){min-height:0}
+body:has(#bullGlobalNav)>header{min-height:0}
+@media(max-width:800px){#bullGlobalNav a{min-width:105px;flex:0 0 105px}}
