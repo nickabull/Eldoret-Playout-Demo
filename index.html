@@ -5,15 +5,15 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#07111e">
 <title>Bull'sHits Playout</title>
-<link rel="stylesheet" href="styles.css?v=0.6.19">
+<link rel="stylesheet" href="styles.css?v=0.6.20">
 <link rel="manifest" href="manifest.json">
-<style>.cacheBadge{display:inline-block;color:#66ed9c;font:bold 9px Arial;margin-left:7px;white-space:nowrap}.row.cacheReady{box-shadow:inset 3px 0 #36cc74}</style><link rel="stylesheet" href="global-nav.css?v=0.6.19"></head>
-<body><script src="global-nav.js?v=0.6.19" defer></script>
+<style>.cacheBadge{display:inline-block;color:#66ed9c;font:bold 9px Arial;margin-left:7px;white-space:nowrap}.row.cacheReady{box-shadow:inset 3px 0 #36cc74}</style><link rel="stylesheet" href="global-nav.css?v=0.6.20"></head>
+<body><script src="global-nav.js?v=0.6.20" defer></script>
 <nav class="bullNav" style="display:flex;gap:12px;align-items:center;padding:7px 12px;background:#172e42;font-size:12px"><a style="color:#b5e4ff" href="scheduling.html" target="_blank" rel="noopener">↗ SCHEDULING</a><a style="color:#b5e4ff" href="logging.html" target="_blank" rel="noopener">↗ AS-RUN LOG</a><a style="color:#b5e4ff" href="cart-wall.html" target="_blank" rel="noopener">↗ CART WALL</a><a style="color:#b5e4ff" href="studio-monitor.html" target="_blank" rel="noopener">↗ STUDIO MONITOR</a><a style="color:#b5e4ff" href="now-playing.html" target="_blank" rel="noopener">↗ NOW PLAYING</a><a style="color:#b5e4ff" href="cd-importer.html" target="_blank" rel="noopener">↗ CD IMPORTER</a><span id="safetyCacheStatus" style="color:#a6f5ca;font-size:10px;white-space:nowrap">CACHE: PREPARING</span></nav><div class="app">
 <header class="top">
-  <section class="panel brand"><h1>BULL'S<b>HITS</b> <span>DEMO</span></h1><small>Browser playout workstation</small><span class="devVersion" title="Development build">BUILD v0.6.19</span></section>
+  <section class="panel brand"><h1>BULL'S<b>HITS</b> <span>DEMO</span></h1><small>Browser playout workstation</small><span class="devVersion" title="Development build">BUILD v0.6.20</span></section>
   <section class="panel clock"><div id="date"></div><strong id="clock"></strong><em>ON AIR</em></section>
-  <section class="panel back"><div class="backTiming" style="display:none"><small>BACKTIME TO NEXT HARD</small><strong id="backtime">--:--</strong><span id="hardLabel">No hard event</span></div><div class="deskNowPlaying" title="Live Now Playing metadata"><div class="deskNpTop"><span>◉ NOW PLAYING</span><span id="deskNpState">OFF AIR</span></div><strong id="deskNpTitle">Nothing playing</strong><span id="deskNpArtist">Waiting for playout</span><div class="deskNpFoot"><span id="deskNpFader">FADER —</span><span id="deskNpElapsed">00:00</span></div></div><div class="hiddenMeter"><canvas id="masterMeter" width="360" height="77"></canvas><span id="meterStatus"></span></div></section>
+  <section class="panel back"><div class="backTiming" style="display:none"><small>BACKTIME TO NEXT HARD</small><strong id="backtime">--:--</strong><span id="hardLabel">No hard event</span></div><div class="deskNowPlaying" title="Live Now Playing metadata"><div class="deskNpTop"><span>◉ NOW PLAYING</span><span id="deskNpState">OFF AIR</span></div><img id="deskNpArtwork" alt="Album cover" style="display:none;width:52px;height:52px;object-fit:cover;float:left;margin:3px 10px 2px 0;border-radius:4px"><strong id="deskNpTitle">Nothing playing</strong><span id="deskNpArtist">Waiting for playout</span><div class="deskNpFoot"><span id="deskNpFader">FADER —</span><span id="deskNpElapsed">00:00</span></div></div><div class="hiddenMeter"><canvas id="masterMeter" width="360" height="77"></canvas><span id="meterStatus"></span></div></section>
 </header>
 
 <main>
@@ -86,12 +86,12 @@
 <audio id="deckA"></audio><audio id="deckB"></audio>
 <div id="cartModal" class="modal hidden"><div class="modalCard"><h3>Edit cart</h3><label>Name<input id="cartName"></label><label>Colour<input id="cartColor" type="color"></label><label><input id="cartLoop" type="checkbox"> Loop</label><div class="modalActions"><button id="cartClear">Clear cart</button><button id="cartCancel">Cancel</button><button id="cartSave" class="go">Save</button></div></div></div>
 <div id="spotifyListenModal" class="modal hidden"><div class="modalCard spotifyListenCard"><div class="spotifyListenHead"><h3>SPOTIFY — PERSONAL LISTENING</h3><button id="spotifyListenClose">✕ Close</button></div><p>Official Spotify player. Playback requires Spotify login and is separate from Eldoret's playout decks, carts and mixer.</p><iframe id="spotifyListenFrame" title="Spotify personal listening" src="about:blank" width="100%" height="352" frameborder="0" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy"></iframe></div></div><div id="toast"></div>
-<script src="meter.js?v=0.6.19"></script><script src="desk-now-playing.js?v=0.6.19"></script>
-<script src="audit.js?v=0.6.19"></script>
-<script src="safety-cache.js?v=0.6.19"></script><script src="app.js?v=0.6.19"></script>
-<script src="markers.js?v=0.6.19"></script>
-<script src="hotbox.js?v=0.6.19"></script>
-<script src="voice-track.js?v=0.6.19"></script>
-<script src="demo-library.js?v=0.6.19"></script>
-<script src="cut-cards.js?v=0.6.19"></script></body>
+<script src="meter.js?v=0.6.20"></script><script src="desk-now-playing.js?v=0.6.20"></script>
+<script src="audit.js?v=0.6.20"></script>
+<script src="safety-cache.js?v=0.6.20"></script><script src="app.js?v=0.6.20"></script>
+<script src="markers.js?v=0.6.20"></script>
+<script src="hotbox.js?v=0.6.20"></script>
+<script src="voice-track.js?v=0.6.20"></script>
+<script src="demo-library.js?v=0.6.20"></script>
+<script src="cut-cards.js?v=0.6.20"></script></body>
 </html>
