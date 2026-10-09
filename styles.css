@@ -10,3 +10,5 @@
 .spotifyRow[draggable="true"]{cursor:grab}.spotifyRow[draggable="true"]:active{cursor:grabbing}.spotifyMeta em{display:block;margin-top:4px;font-size:9px;font-style:normal;color:#67b8ff;text-transform:uppercase;letter-spacing:.05em}
 
 .spotifyListenCard{width:min(520px,92vw);max-width:92vw}.spotifyListenHead{display:flex;justify-content:space-between;align-items:center;gap:12px}.spotifyListenHead h3{margin:0}.spotifyListenCard p{font-size:12px;color:#a6b7c9;line-height:1.5}.spotifyListenCard iframe{border:0;border-radius:12px;display:block}.spotifyListen{background:#1db954!important;color:#06110a!important;font-weight:800}#spotifyListenSelected{width:100%;margin-bottom:6px;background:#17304a;border:1px solid #36516d;color:white;padding:6px;font-size:11px}.spotifyResults{height:calc(100% - 110px)}.audioFlag{font-size:10px;color:#f7b267}
+
+.devVersion{display:inline-block;margin-left:10px;color:#ffd166;font-size:11px;font-weight:800;letter-spacing:.08em}
