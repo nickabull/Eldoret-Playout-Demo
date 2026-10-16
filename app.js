@@ -243,3 +243,12 @@ window.bullCartStates=()=>Array.from({length:3},(_,slot)=>{
  const player=cartPlayers[activeBank+'-'+slot];
  return {loaded:!!src,playing:!!player&&!player.paused&&!player.ended};
 });
+
+
+// Remote controllers receive metadata and timings only; audio URLs remain on Donkey.
+window.bullRemoteCartSnapshot=()=>({bank:activeBank,carts:Array.from({length:3},(_,slot)=>{
+ const cfg=getCart(slot),src=cfg&&lib.find(v=>v.id===cfg.libId),player=cartPlayers[activeBank+'-'+slot];
+ const duration=Number.isFinite(player?.duration)?player.duration:(src?.dur||0);
+ return {title:src?.title||'',artist:src?.artist||'',loaded:!!src,playing:!!player&&!player.paused&&!player.ended,
+ duration:Math.min(86400,Math.max(0,duration)),position:Math.min(86400,Math.max(0,player?.currentTime||0))};
+})});
