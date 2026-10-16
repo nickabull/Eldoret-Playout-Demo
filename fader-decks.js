@@ -29,6 +29,16 @@ function load(s,item){
  repaint();return s.ready;
 }
 function refill(){for(const s of slots)if(!s.item)load(s,available());repaint()}
+window.bullFaderQueueAdded=item=>{
+ if(!enabled||!item?.url)return false;
+ if(slots.some(s=>s.item?.id===item.id))return true;
+ // Reserve free decks without touching an on-air or already prepared item.
+ const free=slots.find(s=>!s.item&&stopped(s));
+ if(free){load(free,item);message('Deck '+free.name+' READY: '+item.title);return true}
+ message('Queued '+item.title+' · both decks occupied; loads when a deck is freed');
+ return true;
+};
+
 async function playSlot(s){
  if(!s.item||!stopped(s))return;
  const item=s.item,version=s.version;s.starting=true;
