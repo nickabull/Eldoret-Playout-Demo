@@ -117,7 +117,7 @@
 <script src="safety-cache.js?v=0.6.45"></script><script src="audio-library.js?v=0.6.59"></script><script src="app.js?v=0.6.60-cue-deck"></script>
 <script src="fader-decks.js?v=0.6.52"></script>
 <script src="markers.js?v=0.6.52"></script>
-<script src="hotbox.js?v=0.6.52"></script>
+<script src="hotbox.js?v=0.6.61-fader-c"></script>
 <script src="voice-track.js?v=0.6.52"></script>
 <script src="demo-library.js?v=0.6.45"></script>
 <script src="cut-cards.js?v=0.6.52"></script><script src="library-access.js?v=0.6.45"></script><script src="desk-layout.js?v=0.6.45"></script><script>
@@ -138,7 +138,7 @@ const status=bar.querySelector('#airliteTestStatus'),arm=bar.querySelector('#air
 const ledEnable=bar.querySelector('#airliteLedEnable'),ledStatus=bar.querySelector('#airliteLedStatus');
 let ledWork=Promise.resolve(),ledVersion=0,ledOwned=false;
 const ledSent=new Map();
-function reset(){window.bullFaderArm?.(false);previous=null;buttonMasks=[0,0];arm.checked=false;cartArm.checked=false;ledVersion++;ledSent.clear();ledOwned=false;ledEnable.checked=false;ledStatus.textContent='Lights off';}
+function reset(){window.bullFaderArm?.(false);window.bullHotboxArm?.(false);previous=null;buttonMasks=[0,0];arm.checked=false;cartArm.checked=false;ledVersion++;ledSent.clear();ledOwned=false;ledEnable.checked=false;ledStatus.textContent='Lights off';}
 function syncLights(clear=false){
  if(!device?.opened||(!ledEnable.checked&&!ledOwned&&!clear))return ledWork;
  const target=device,version=ledVersion,states=window.bullCartStates?.()||[];
@@ -184,6 +184,7 @@ function report(e){
  // EA is the fader-state report captured on CH4 and CH5. E0 is a channel-button report.
  if(bytes.length===10&&bytes[0]===0x0a&&bytes[1]===0xea){
   window.bullFaderSignal?.(bytes);
+  window.bullHotboxFaderSignal?.(bytes);
  }
 
 }
@@ -260,7 +261,7 @@ async function autoConnect(){
 navigator.hid?.addEventListener('disconnect',e=>{if(e.device===device||e.device===pendingDevice)disconnected('Airlite unplugged · waiting for USB reconnection')});
 navigator.hid?.addEventListener('connect',e=>{if(isAirlite(e.device))autoConnect()});
 autoConnect();
-arm.onchange=async()=>{try{await window.bullFaderArm?.(arm.checked)}catch(err){arm.checked=false;status.textContent='Fader setup failed: '+err.message}};
+arm.onchange=async()=>{try{await window.bullFaderArm?.(arm.checked);window.bullHotboxArm?.(arm.checked)}catch(err){arm.checked=false;status.textContent='Fader setup failed: '+err.message}};
 cartArm.onchange=()=>{status.textContent=cartArm.checked?'Carts armed · A1–A3 STOP / REWIND · B1–B3 PLAY':'Cart buttons disarmed'};
 })();
 </script>
