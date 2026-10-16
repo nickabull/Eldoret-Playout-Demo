@@ -117,7 +117,7 @@
 <audio id="deckA"></audio><audio id="deckB"></audio>
 <div id="cartModal" class="modal hidden"><div class="modalCard"><h3>Edit cart</h3><label>Name<input id="cartName"></label><label>Colour<input id="cartColor" type="color"></label><label><input id="cartLoop" type="checkbox"> Loop</label><div class="modalActions"><button id="cartClear">Clear cart</button><button id="cartCancel">Cancel</button><button id="cartSave" class="go">Save</button></div></div></div>
 <div id="spotifyListenModal" class="modal hidden"><div class="modalCard spotifyListenCard"><div class="spotifyListenHead"><h3>SPOTIFY — PERSONAL LISTENING</h3><button id="spotifyListenClose">✕ Close</button></div><p>Official Spotify player. Playback requires Spotify login and is separate from Eldoret's playout decks, carts and mixer.</p><iframe id="spotifyListenFrame" title="Spotify personal listening" src="about:blank" width="100%" height="352" frameborder="0" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy"></iframe></div></div><div id="toast"></div>
-<script src="cut-levels.js?v=0.6.56"></script><script src="meter.js?v=0.6.58"></script><script src="desk-now-playing.js?v=0.6.64-nowplaying"></script>
+<script src="cut-levels.js?v=0.6.56"></script><script src="meter.js?v=0.6.65-audio-route"></script><script src="desk-now-playing.js?v=0.6.64-nowplaying"></script>
 <script src="audit.js?v=0.6.64-nowplaying"></script>
 <script src="safety-cache.js?v=0.6.45"></script><script src="audio-library.js?v=0.6.59"></script><script src="app.js?v=0.6.64-nowplaying"></script>
 <script src="fader-decks.js?v=0.6.63-compact-options"></script>
@@ -276,7 +276,7 @@ cartArm.onchange=()=>{status.textContent=cartArm.checked?'Carts armed · A1–A3
 const panel=document.createElement('section');
 panel.id='bullAudioRouting';
 panel.style.cssText='position:fixed;left:12px;bottom:58px;z-index:9997;width:min(480px,calc(100vw - 24px));max-height:55vh;overflow:auto;background:#10263b;color:#eaf6ff;border:1px solid #5c93b4;border-radius:9px;padding:12px;font:12px Arial;box-shadow:0 5px 18px #0008';
-panel.innerHTML='<div style="display:flex;justify-content:space-between;align-items:center"><strong>🎚 AUDIO ROUTING · EXPERIMENTAL</strong><button id="routeToggle" style="padding:5px">HIDE</button></div><div id="routeBody"><p>Choose independent browser audio outputs for software Deck A and Deck B. This does not automatically assign Airlite hardware faders.</p><button id="routeScan" style="padding:6px">SCAN AUDIO OUTPUTS</button><div style="margin-top:8px">Deck A <select id="routeA" style="max-width:85%;padding:5px"></select></div><div style="margin-top:8px">Deck B <select id="routeB" style="max-width:85%;padding:5px"></select></div><p id="routeStatus">Outputs not scanned yet.</p></div>';
+panel.innerHTML='<div style="display:flex;justify-content:space-between;align-items:center"><strong>🎚 AUDIO ROUTING · EXPERIMENTAL</strong><button id="routeToggle" style="padding:5px">HIDE</button></div><div id="routeBody"><p>Choose independent browser audio outputs for software Deck A and Deck B. This does not automatically assign Airlite hardware faders.</p><button id="routeResume" style="padding:6px">RESUME AUDIO</button> <button id="routeScan" style="padding:6px">SCAN AUDIO OUTPUTS</button><div style="margin-top:8px">Deck A <select id="routeA" style="max-width:85%;padding:5px"></select></div><div style="margin-top:8px">Deck B <select id="routeB" style="max-width:85%;padding:5px"></select></div><p id="routeStatus">Outputs not scanned yet.</p></div>';
 document.body.append(panel);
 const $=id=>document.getElementById(id),A=$('deckA'),B=$('deckB'),status=$('routeStatus');
 const toggle=$('routeToggle'),body=$('routeBody');
@@ -297,12 +297,13 @@ async function scan(){
 }
 async function apply(which){
  const audio=which==='A'?A:B,select=$('route'+which);
- if(typeof audio.setSinkId!=='function'){status.textContent='This Chromium build does not support per-player output selection (setSinkId).';return}
+ if(typeof window.bullRouteAudio!=='function'){status.textContent='This Chromium build does not support per-player output selection (setSinkId).';return}
  try{
-  await audio.setSinkId(select.value);
+  await window.bullRouteAudio(audio,select.value);
   status.textContent='Deck '+which+' output selected: '+select.options[select.selectedIndex].text+'. Other deck unchanged.';
  }catch(e){status.textContent='Deck '+which+' routing failed: '+e.message}
 }
+$('routeResume').onclick=async()=>{try{await window.bullRecoverAudio();status.textContent='Audio engine RUNNING. If silent, scan and select the Airlite output below.'}catch(e){status.textContent='Audio resume failed: '+e.message}};
 $('routeScan').onclick=scan;
 $('routeA').onchange=()=>apply('A');
 $('routeB').onchange=()=>apply('B');
