@@ -83,6 +83,7 @@ $('markerPreview').onclick=async()=>{
 function markerStopAll(){seguePending=false;segueFiredFor=null;A.volume=1;B.volume=1}
 const originalStart=start;
 start=async function(i){
+ if(window.bullFaderMode?.())return window.bullFaderPlayItem(i);
  const x=log[i];if(!x?.url)return originalStart(i);
  const old=deck,oldIndex=play,oldItem=log[oldIndex];
  const incoming=deck===A?B:A;incoming.volume=1;
@@ -98,6 +99,7 @@ start=async function(i){
  $('status').textContent='Playing '+x.title;render();
 };
 function markerTimeUpdate(e){
+ if(window.bullFaderMode?.())return;
  if(e.target!==deck||play<0||$('mode').value!=='AUTO'||seguePending)return;
  const x=log[play],m=markersOf(x),at=m.segueStart;
  if(at==null||at<=0||e.target.currentTime<at||segueFiredFor===x.id)return;
@@ -107,4 +109,5 @@ function markerTimeUpdate(e){
 A.addEventListener('timeupdate',markerTimeUpdate);B.addEventListener('timeupdate',markerTimeUpdate);
 $('stopBtn').addEventListener('click',markerStopAll);
 const originalRender=render;
-render=function(){originalRender();const x=log[play],n=log[play<0?0:play+1];if(x){const m=markersOf(x);$('nowCue').textContent='Start '+markerTime(m.start||0);$('nowSegue').textContent='Segue '+markerTime(m.segueStart)}if(n){$('nextType').textContent=n.type.toUpperCase()}};
+render=function(){originalRender();if(window.bullFaderMode?.())return;const x=log[play],n=log[play<0?0:play+1];if(x){const m=markersOf(x);$('nowCue').textContent='Start '+markerTime(m.start||0);$('nowSegue').textContent='Segue '+markerTime(m.segueStart)}if(n){$('nextType').textContent=n.type.toUpperCase()}};
+
