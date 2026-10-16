@@ -6,7 +6,19 @@ const slots=[A,B].map((audio,i)=>({audio,name:i?'B':'A',item:null,version:0,star
 const panel=document.createElement('section');
 panel.className='panel';panel.hidden=true;panel.id='faderDeckTransport';
 panel.innerHTML='<h3>FADER DECKS · CH4 / CH5</h3><p>Raise to play. Lower to stop and load the next available item. Each deck reserves its own item.</p><div id="faderDeckStatus" role="status"></div><div class="actions"><button id="faderLoadA">LOAD SELECTED → A</button> <button id="faderLoadB">LOAD SELECTED → B</button> <button id="faderRefill">LOAD EMPTY DECKS</button></div>';
-document.querySelector('.decks').after(panel);
+// Keep optional transport controls outside the fixed three-row studio grid.
+panel.style.cssText='position:fixed;left:12px;bottom:64px;z-index:9999;width:min(460px,calc(100vw - 24px));max-height:50vh;overflow:auto;padding:12px;background:#10263b';
+document.body.append(panel);
+const options=document.createElement('button');
+options.id='faderOptionsToggle';options.type='button';options.hidden=true;
+options.textContent='FADER OPTIONS';options.setAttribute('aria-controls',panel.id);
+options.setAttribute('aria-expanded','false');
+document.querySelector('.scheduleBox .toolbar').append(options);
+function showOptions(show){panel.hidden=!show;options.setAttribute('aria-expanded',String(show))}
+options.onclick=()=>showOptions(panel.hidden);
+const close=document.createElement('button');close.type='button';close.textContent='CLOSE';
+close.onclick=()=>showOptions(false);panel.prepend(close);
+document.addEventListener('keydown',e=>{if(e.key==='Escape')showOptions(false)});
 const message=text=>{document.getElementById('faderDeckStatus').textContent=text};
 function available(){return log.find(x=>x.url&&!used.has(x.id)&&!slots.some(s=>s.item?.id===x.id))||null}
 function stopped(s){return s.audio.paused&&!s.starting}
@@ -86,7 +98,7 @@ window.bullFaderArm=async value=>{
  if(!value){repaint();return}
  await window.bullResumeAudio?.();
  if(!enabled){
-  enabled=true;panel.hidden=false;document.getElementById('mode').value='ASSIST';
+  enabled=true;options.hidden=false;document.getElementById('mode').value='ASSIST';
   // Adopt a running legacy deck instead of stopping or replacing it on arming.
   const current=log[play];
   if(current&&(!deck.paused||deck.currentTime>0)){
