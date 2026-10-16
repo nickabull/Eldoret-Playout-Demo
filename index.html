@@ -32,7 +32,7 @@
 <body><script src="global-nav.js?v=0.6.45" defer></script>
 <nav class="bullNav" style="display:flex;gap:12px;align-items:center;padding:7px 12px;background:#172e42;font-size:12px"><a style="color:#b5e4ff" href="production-studio.html" target="_blank" rel="noopener">↗ PRODUCTION STUDIO</a><a style="color:#b5e4ff" href="scheduling.html" target="_blank" rel="noopener">↗ SCHEDULING</a><a style="color:#b5e4ff" href="logging.html" target="_blank" rel="noopener">↗ AS-RUN LOG</a><a style="color:#b5e4ff" href="cart-wall.html" target="_blank" rel="noopener">↗ CART WALL</a><a style="color:#b5e4ff" href="studio-monitor.html" target="_blank" rel="noopener">↗ STUDIO MONITOR</a><a style="color:#b5e4ff" href="now-playing.html" target="_blank" rel="noopener">↗ NOW PLAYING</a><a style="color:#b5e4ff" href="cd-importer.html" target="_blank" rel="noopener">↗ CD IMPORTER</a><span id="safetyCacheStatus" style="color:#a6f5ca;font-size:10px;white-space:nowrap">CACHE: PREPARING</span></nav><div class="app">
 <header class="top">
-  <section class="panel brand"><h1>BULL'S<b>HITS</b> <span>DEMO</span></h1><small>Browser playout workstation</small><span class="devVersion" title="Development build">BUILD v0.6.53 · CART BUTTONS</span></section>
+  <section class="panel brand"><h1>BULL'S<b>HITS</b> <span>DEMO</span></h1><small>Browser playout workstation</small><span class="devVersion" title="Development build">BUILD v0.6.54 · AIRLITE AUTO CONNECT</span></section>
   <section class="panel clock"><div id="date"></div><strong id="clock"></strong><div id="clockWords" aria-label="Time in words"></div><em>ON AIR</em></section>
   <section class="panel back"><div class="backTiming" style="display:none"><small>BACKTIME TO NEXT HARD</small><strong id="backtime">--:--</strong><span id="hardLabel">No hard event</span></div><div class="deskNowPlaying" title="Live Now Playing metadata"><div class="deskNpTop"><span>◉ NOW PLAYING</span><span id="deskNpState">OFF AIR</span></div><div class="deskNpMiddle"><img id="deskNpArtwork" alt="Album cover" style="display:none"><div class="deskNpWords"><strong id="deskNpTitle">Nothing playing</strong><span id="deskNpArtist">Waiting for playout</span></div></div><div class="deskNpFoot"><span id="deskNpFader">FADER —</span><span class="deskNpTimers"><span>UP <b id="deskNpElapsed">00:00</b></span><span>DOWN <b id="deskNpRemaining">00:00</b></span></span></div></div><div class="hiddenMeter"><canvas id="masterMeter" width="360" height="77"></canvas><span id="meterStatus"></span></div></section>
 </header>
@@ -120,7 +120,7 @@
 (()=>{'use strict';
 const bar=document.createElement('div');
 bar.style.cssText='position:fixed;right:12px;top:48px;z-index:9998;max-width:min(440px,calc(100vw - 48px));background:#10263b;color:#eaf6ff;border:1px solid #5c93b4;border-radius:9px;padding:9px 12px;font:12px Arial;box-shadow:0 5px 18px #0008';
-bar.innerHTML='<strong>AIRLITE · CART BUTTONS</strong> <button id="airlitePanelToggle" type="button" aria-expanded="true" style="padding:6px">HIDE</button><div id="airlitePanelBody" style="margin-top:7px"><button id="airliteTestConnect" style="margin-left:8px;padding:6px">CONNECT</button> <button id="airliteDisconnect" disabled style="padding:6px">DISCONNECT</button><div style="margin-top:7px"><label><input id="airliteTestArm" type="checkbox" disabled> ARM FADERS 4 / 5</label> <label><input id="airliteCartArm" type="checkbox" disabled> ARM CART BUTTONS</label></div><div style="margin-top:6px"><label><input id="airliteLedEnable" type="checkbox" disabled> SYNC CART LIGHTS</label><span id="airliteLedStatus" style="margin-left:8px">Lights off</span></div><div style="margin-top:6px">A1–A3 → STOP / REWIND · B1–B3 → PLAY Carts 1–3 (current bank)</div><div id="airliteTestStatus" style="margin-top:6px" aria-live="polite">Disconnected · buttons v1</div></div>';
+bar.innerHTML='<strong>AIRLITE · CART BUTTONS</strong> <button id="airlitePanelToggle" type="button" aria-expanded="true" style="padding:6px">HIDE</button><div id="airliteConnectionBadge" role="status" aria-live="polite" style="display:flex;align-items:center;gap:12px;padding:10px;margin:9px 0;background:#071726;border:1px solid #8c3542;border-radius:7px"><span id="airliteConnectionLamp" aria-hidden="true" style="display:inline-block;flex-shrink:0;width:40px;height:40px;border-radius:50%;background:#f04452;border:3px solid #ff9a9f;box-shadow:0 0 18px #f0445280"></span><strong id="airliteConnectionLabel" style="font-size:17px;color:#ffadb4">NOT CONNECTED</strong></div><div id="airlitePanelBody" style="margin-top:7px"><button id="airliteTestConnect" style="margin-left:8px;padding:6px">CONNECT</button> <button id="airliteDisconnect" disabled style="padding:6px">DISCONNECT</button><div style="margin-top:7px"><label><input id="airliteTestArm" type="checkbox" disabled> ARM FADERS 4 / 5</label> <label><input id="airliteCartArm" type="checkbox" disabled> ARM CART BUTTONS</label></div><div style="margin-top:6px"><label><input id="airliteLedEnable" type="checkbox" disabled> SYNC CART LIGHTS</label><span id="airliteLedStatus" style="margin-left:8px">Lights off</span></div><div style="margin-top:6px">A1–A3 → STOP / REWIND · B1–B3 → PLAY Carts 1–3 (current bank)</div><div id="airliteTestStatus" style="margin-top:6px" aria-live="polite">Disconnected · buttons v1</div></div>';
 document.body.append(bar);
 const panelToggle=bar.querySelector('#airlitePanelToggle'),panelBody=bar.querySelector('#airlitePanelBody');
 panelToggle.onclick=()=>{panelBody.hidden=!panelBody.hidden;panelToggle.textContent=panelBody.hidden?'SHOW':'HIDE';panelToggle.setAttribute('aria-expanded',String(!panelBody.hidden))};
@@ -182,22 +182,79 @@ function report(e){
  }
 
 }
+const badge=bar.querySelector('#airliteConnectionBadge'),lamp=bar.querySelector('#airliteConnectionLamp'),connectionLabel=bar.querySelector('#airliteConnectionLabel');
+let connecting=false,manuallyStopped=false,connectionVersion=0,pendingDevice=null;
+function showConnection(connected,text){
+ const colour=connected?'#32e77b':'#f04452';
+ lamp.style.background=colour;lamp.style.borderColor=connected?'#a5ffc6':'#ff9a9f';
+ lamp.style.boxShadow='0 0 20px '+colour+'99';
+ badge.style.borderColor=connected?'#287b4b':'#8c3542';
+ connectionLabel.style.color=connected?'#a5ffc6':'#ffadb4';
+ connectionLabel.textContent=text||(connected?'AIRLITE CONNECTED':'NOT CONNECTED');
+}
+function disconnected(message='Disconnected · click CONNECT to select the Airlite'){
+ connectionVersion++;
+ if(device)device.removeEventListener('inputreport',report);
+ device=null;pendingDevice=null;reset();
+ arm.disabled=true;cartArm.disabled=true;ledEnable.disabled=true;disconnect.disabled=true;
+ connect.textContent='CONNECT';showConnection(false);status.textContent=message;
+}
+const isAirlite=d=>d.vendorId===0x0805&&d.productId===0x1402;
+async function attach(target,manual){
+ const version=++connectionVersion;pendingDevice=target;
+ showConnection(false,'CONNECTING…');
+ try{
+  if(!target.opened)await target.open();
+  if(version!==connectionVersion){if(target.opened&&target!==device)try{await target.close()}catch{}return}
+  if(device&&device!==target){device.removeEventListener('inputreport',report);try{if(device.opened)await device.close()}catch{}}
+  device=target;pendingDevice=null;reset();
+  device.removeEventListener('inputreport',report);device.addEventListener('inputreport',report);
+  arm.disabled=false;cartArm.disabled=false;ledEnable.disabled=false;disconnect.disabled=false;
+  connect.textContent='RECONNECT';showConnection(true);
+  status.textContent=(manual?'Connected':'Automatically connected')+' · arm carts / faders to enable controls';
+  // Automatic USB connection does not require or unlock browser audio playback.
+  if(manual)try{await window.bullResumeAudio?.()}catch{}
+ }catch(err){
+  if(version!==connectionVersion)return;
+  pendingDevice=null;
+  if(device?.opened){showConnection(true);status.textContent='Reconnect failed: '+err.message}
+  else disconnected('Connection failed: '+err.message+' · click CONNECT to retry');
+ }
+}
 connect.onclick=async()=>{
- if(!navigator.hid){status.textContent='WebHID unavailable';return}
+ if(connecting)return;
+ if(!navigator.hid){showConnection(false,'USB UNAVAILABLE');status.textContent='WebHID unavailable · use Chrome on Donkey';return}
+ connecting=true;connect.disabled=true;manuallyStopped=false;
  try{
   const found=await navigator.hid.requestDevice({filters:[{vendorId:0x0805,productId:0x1402}]});
-  if(!found.length)return;
-  if(device)device.removeEventListener('inputreport',report);
-  device=found[0];if(!device.opened)await device.open();
-  reset();device.addEventListener('inputreport',report);arm.disabled=false;cartArm.disabled=false;ledEnable.disabled=false;disconnect.disabled=false;
-  // Resume the browser audio engine during this user click, before HID starts.
-  try{await window.bullResumeAudio?.()}catch{}
-  status.textContent='Connected · arm carts: B1–B3 PLAY / A1–A3 STOP';connect.textContent='RECONNECT';
- }catch(err){status.textContent='Connection failed: '+err.message}
+  if(found.length)await attach(found[0],true);
+ }catch(err){status.textContent='Connection failed: '+err.message;if(!device?.opened)showConnection(false)}
+ finally{connecting=false;connect.disabled=false}
 };
-function disconnected(){if(device)device.removeEventListener('inputreport',report);device=null;reset();arm.disabled=true;cartArm.disabled=true;ledEnable.disabled=true;disconnect.disabled=true;connect.textContent='CONNECT';status.textContent='Disconnected · buttons v1';}
-disconnect.onclick=async()=>{const old=device;ledEnable.checked=false;await syncLights(true);disconnected();try{if(old?.opened)await old.close()}catch(err){status.textContent='Disconnected: '+err.message}};
-navigator.hid?.addEventListener('disconnect',e=>{if(e.device===device)disconnected()});
+disconnect.onclick=async()=>{
+ manuallyStopped=true;connectionVersion++;pendingDevice=null;disconnect.disabled=true;
+ showConnection(false);const old=device;
+ ledEnable.checked=false;await syncLights(true);
+ disconnected('Disconnected manually · click CONNECT to reconnect');
+ try{if(old?.opened)await old.close()}catch(err){status.textContent='Disconnected: '+err.message}
+};
+async function autoConnect(){
+ if(connecting||manuallyStopped||device?.opened)return;
+ if(!navigator.hid?.getDevices){showConnection(false,'USB UNAVAILABLE');status.textContent='Automatic USB access unavailable · use CONNECT in Chrome on Donkey';return}
+ connecting=true;connect.disabled=true;
+ const version=connectionVersion;
+ try{
+  status.textContent='Checking previously authorised Airlite…';
+  const found=(await navigator.hid.getDevices()).filter(isAirlite);
+  if(version!==connectionVersion||manuallyStopped)return;
+  if(found.length===1)await attach(found[0],false);
+  else{showConnection(false);status.textContent=found.length?'Multiple Airlite devices · click CONNECT to choose':'No authorised Airlite found · connect USB and click CONNECT once';}
+ }catch(err){if(version===connectionVersion){showConnection(false);status.textContent='Automatic connection unavailable: '+err.message+' · click CONNECT'}}
+ finally{connecting=false;connect.disabled=false}
+}
+navigator.hid?.addEventListener('disconnect',e=>{if(e.device===device||e.device===pendingDevice)disconnected('Airlite unplugged · waiting for USB reconnection')});
+navigator.hid?.addEventListener('connect',e=>{if(isAirlite(e.device))autoConnect()});
+autoConnect();
 arm.onchange=async()=>{try{await window.bullFaderArm?.(arm.checked)}catch(err){arm.checked=false;status.textContent='Fader setup failed: '+err.message}};
 cartArm.onchange=()=>{status.textContent=cartArm.checked?'Carts armed · A1–A3 STOP / REWIND · B1–B3 PLAY':'Cart buttons disarmed'};
 })();
