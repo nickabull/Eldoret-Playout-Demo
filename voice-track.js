@@ -19,7 +19,7 @@
  q('vtPreview').onclick=async()=>{
   const [,a,b]=selected();if(!a?.url||!b?.url||!micUrl){message('You need two playable local audio files and a recorded microphone first.');return}
   stopPreview();const tail=Number(q('vtTail').value)||12,micAt=Number(q('vtMicAt').value)||0,inAt=Number(q('vtInAt').value)||0;
-  const out=new Audio(a.url),voice=new Audio(micUrl),incoming=new Audio(b.url);previewing=[out,voice,incoming];
+  const out=new Audio(a.url),voice=new Audio(micUrl),incoming=new Audio(b.url);window.bullApplyCutLevel?.(out,a);window.bullApplyCutLevel?.(incoming,b);previewing=[out,voice,incoming];
   out.currentTime=Math.max(0,(a.dur||0)-tail);incoming.currentTime=b.markers?.start||b.cue||0;
   const later=(ms,fn)=>{const t=setTimeout(fn,ms);previewing.push({pause:()=>clearTimeout(t),src:''})};
   try{await out.play();later(micAt*1000,()=>voice.play().catch(()=>{}));later(inAt*1000,()=>incoming.play().catch(()=>{}));message('Previewing three-way transition through browser speakers.')}
@@ -36,3 +36,4 @@
   }catch(e){message('Could not save recording: '+e.message)}
  };
 })();
+

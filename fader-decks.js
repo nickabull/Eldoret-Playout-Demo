@@ -37,7 +37,7 @@ async function playSlot(s){
   if(s.error)throw Error(s.error);
   if(!log.some(x=>x.id===item.id))throw Error('Item removed from running order; load another item');
   await window.bullResumeAudio?.();if(version!==s.version)return;
-  await s.audio.play();if(version!==s.version)return;
+  window.bullApplyCutLevel?.(s.audio,item);await s.audio.play();if(version!==s.version)return;
   used.add(item.id);deck=s.audio;play=log.findIndex(x=>x.id===item.id);
   logEvent('PLAY',s);message('Deck '+s.name+' playing '+item.title);
  }catch(err){if(version===s.version){s.error=err.message;message('Deck '+s.name+': '+err.message)}}
@@ -120,3 +120,4 @@ for(const s of slots){
 }
 document.getElementById('faderRefill').onclick=refill;
 })();
+

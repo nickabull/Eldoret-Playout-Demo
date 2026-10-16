@@ -3,7 +3,7 @@
  const canvas=document.getElementById('masterMeter');if(!canvas)return;
  const label=document.getElementById('meterStatus');
  let ctx=null,analyser=null,sourceCount=0,ready=false;
- const registered=new WeakSet();
+ const registered=new WeakMap();
  function init(){
   if(ctx)return true;
   try{ctx=new (window.AudioContext||window.webkitAudioContext)();analyser=ctx.createAnalyser();analyser.fftSize=2048;analyser.smoothingTimeConstant=.12;analyser.connect(ctx.destination);ready=true;label.textContent='SOFTWARE MIX · A/B/C/D';return true}
@@ -11,10 +11,11 @@
  }
  function register(el){
   if(!el||registered.has(el)||!init())return;
-  try{const source=ctx.createMediaElementSource(el);source.connect(analyser);registered.add(el);sourceCount++;ctx.resume().catch(()=>{})}
+  try{const source=ctx.createMediaElementSource(el);const gain=ctx.createGain();source.connect(gain);gain.connect(analyser);registered.set(el,gain);sourceCount++;ctx.resume().catch(()=>{})}
   catch(e){console.warn('Eldoret meter source',e)}
  }
  window.eldoretMeterRegister=register;
+ window.bullAudioGain=(el,value)=>{register(el);const node=registered.get(el);if(!node)throw Error('Audio gain unavailable');node.gain.cancelScheduledValues(ctx.currentTime);if(el.paused)node.gain.setValueAtTime(value,ctx.currentTime);else node.gain.setTargetAtTime(value,ctx.currentTime,.01)};
  window.bullResumeAudio=async()=>{if(!init())throw Error('Audio engine unavailable');if(ctx.state!=='running')await ctx.resume();if(ctx.state!=='running')throw Error('Audio engine '+ctx.state);return ctx.state};
  window.bullAudioEngineState=()=>ctx?.state||'not initialized';
  document.addEventListener('pointerdown',()=>{if(ctx?.state==='suspended')ctx.resume().catch(()=>{})},{passive:true});
@@ -54,3 +55,4 @@
  }
  frame();
 })();
+

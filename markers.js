@@ -68,13 +68,13 @@ $('markerWave').addEventListener('click',e=>{
 function markerSave(){if(!markerItem)return;const m=markersOf(markerItem);if(m.start!=null)markerItem.cue=m.start;if(m.intro1!=null)markerItem.intro=m.intro1;if(m.segueStart!=null)markerItem.segue=m.segueStart;if(m.fadeDown!=null)markerItem.fade=m.fadeDown;render();edit();toast('Markers saved in running order');closeMarkers()}
 $('markerSave').onclick=markerSave;
 $('markerAudition').onclick=async()=>{
- if(!markerItem?.url)return toast('Import audio first');stopMarkerPreview();const a=new Audio(markerItem.url);markerPreviewPlayers.push(a);a.currentTime=markersOf(markerItem).start||0;await a.play().catch(()=>toast('Audio could not play'));
+ if(!markerItem?.url)return toast('Import audio first');stopMarkerPreview();const a=new Audio(markerItem.url);window.bullApplyCutLevel?.(a,markerItem);markerPreviewPlayers.push(a);a.currentTime=markersOf(markerItem).start||0;await a.play().catch(()=>toast('Audio could not play'));
 };
 $('markerPreview').onclick=async()=>{
  if(!markerItem?.url)return toast('Import audio first');
  const index=log.indexOf(markerItem),next=log[index+1];if(!next?.url)return toast('Add a playable next cut to preview the segue');
  const m=markersOf(markerItem),t=m.segueStart;if(t==null)return toast('Set a segue start marker first');
- stopMarkerPreview();const a=new Audio(markerItem.url),b=new Audio(next.url);markerPreviewPlayers.push(a,b);
+ stopMarkerPreview();const a=new Audio(markerItem.url),b=new Audio(next.url);window.bullApplyCutLevel?.(a,markerItem);window.bullApplyCutLevel?.(b,next);markerPreviewPlayers.push(a,b);
  a.currentTime=Math.max(m.start||0,t-3);let triggered=false;
  a.ontimeupdate=()=>{if(triggered||a.currentTime<t)return;triggered=true;b.currentTime=markersOf(next).start||0;b.play().catch(()=>{});const end=m.segueEnd??markerItem.dur;const remaining=Math.max(.2,end-t);const initial=a.volume;const began=performance.now();const timer=setInterval(()=>{if(a.paused){clearInterval(timer);return}a.volume=Math.max(0,initial*(1-(performance.now()-began)/1000/remaining));if(a.volume===0){a.pause();clearInterval(timer)}},60)};
  await a.play().catch(()=>toast('Audio could not play'));
@@ -87,7 +87,7 @@ start=async function(i){
  const x=log[i];if(!x?.url)return originalStart(i);
  const old=deck,oldIndex=play,oldItem=log[oldIndex];
  const incoming=deck===A?B:A;incoming.volume=1;
- try{incoming.src=x.url;incoming.currentTime=markersOf(x).start||0;await incoming.play()}
+ try{window.bullApplyCutLevel?.(incoming,x);incoming.src=x.url;incoming.currentTime=markersOf(x).start||0;await incoming.play()}
  catch(e){toast('Cannot play '+x.title);return}
  deck=incoming;play=i;seguePending=false;segueFiredFor=null;
  if(old!==incoming&&!old.paused&&oldItem){
@@ -110,4 +110,5 @@ A.addEventListener('timeupdate',markerTimeUpdate);B.addEventListener('timeupdate
 $('stopBtn').addEventListener('click',markerStopAll);
 const originalRender=render;
 render=function(){originalRender();if(window.bullFaderMode?.())return;const x=log[play],n=log[play<0?0:play+1];if(x){const m=markersOf(x);$('nowCue').textContent='Start '+markerTime(m.start||0);$('nowSegue').textContent='Segue '+markerTime(m.segueStart)}if(n){$('nextType').textContent=n.type.toUpperCase()}};
+
 
