@@ -236,3 +236,10 @@ const cartTabs=document.getElementById('cartViewTabs');
 cartTabs?.querySelectorAll('button').forEach(btn=>btn.onclick=()=>{cartView=btn.dataset.view;cartTabs.querySelectorAll('button').forEach(x=>x.classList.toggle('active',x===btn));document.getElementById('carts').classList.toggle('machineView',cartView==='machines');document.getElementById('carts').classList.toggle('hotkeyView',cartView==='hotkeys');renderCarts()});
 document.getElementById('carts').classList.add('machineView');
 
+
+// Playback state for hardware indicator feedback; follows the selected cart bank.
+window.bullCartStates=()=>Array.from({length:3},(_,slot)=>{
+ const cfg=getCart(slot),src=cfg&&lib.find(v=>v.id===cfg.libId);
+ const player=cartPlayers[activeBank+'-'+slot];
+ return {loaded:!!src,playing:!!player&&!player.paused&&!player.ended};
+});
