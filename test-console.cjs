@@ -1,0 +1,9 @@
+const vm=require('vm'),fs=require('fs'),assert=require('assert');let clock=1000,receive,timer;const elems=new Map();function element(){return {style:{},dataset:{},classList:{toggle(){}},setAttribute(k,v){this[k]=v},append(b){elems.set(b.dataset.id,b)}}}const photo=element(),named={consolePhoto:photo};const doc={querySelector(){return photo},getElementById(id){return named[id]??=element()},createElement:element,querySelectorAll(){return []}};const window={addEventListener(){}};vm.runInNewContext(fs.readFileSync(__dirname+'/airlite-console.js','utf8'),{document:doc,window,Date:class extends Date{static now(){return clock}},BroadcastChannel:class{set onmessage(fn){receive=fn}},localStorage:{getItem(){return null}},setInterval(fn){timer=fn},setTimeout(){},console}); // Date is needed for display as a constructor.
+
+assert.equal(elems.size,43);
+receive({data:{sender:'main',at:clock,connected:true,report:{at:clock,bytes:[4,196,1,4,0,0,0,0,0,0]}}});
+assert(elems.get('a1').className.includes('pressed'));assert(elems.get('b3').className.includes('pressed'));assert(elems.get('a2').className.includes('released'));assert(elems.get('air-cue').className.includes('unknown'));
+clock+=100;receive({data:{sender:'main',at:clock,connected:true,report:{at:clock,bytes:[10,234,0,0,0,1,0,1,0,0]}}});assert(named.consoleFaders.textContent.includes('CH4 UP'));assert(named.consoleFaders.textContent.includes('CH5 DOWN'));
+clock+=100;receive({data:{sender:'main',at:clock,connected:true,report:{at:clock,bytes:[10,224,0,0,0,1,0,1,1,1]}}});assert(elems.get('ch4-on').className.includes('pressed'));assert(elems.get('ch5-on').className.includes('unknown'));
+clock+=6000;timer();assert(elems.get('a1').className.includes('unknown'));assert(named.deskMode.textContent.includes('DISCONNECTED'));
+console.log('PASS: 43 aligned overlays; independent A/B masks; fader switch distinction; exact captured ON signature; unmapped controls unknown; stale feed resets');
