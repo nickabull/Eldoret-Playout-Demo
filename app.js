@@ -34,6 +34,46 @@ async function toggleCartCue(i){
   renderCarts();
  }catch(e){if(cartCuePlayer===audio)releaseCartCue();toast('CUE preview failed: '+e.message)}
 }
+let playlistCuePlayer=null,playlistCueItem=null,playlistCueToken=0;
+function stopPlaylistCue(){
+ ++playlistCueToken;
+ if(playlistCuePlayer){playlistCuePlayer.pause();playlistCuePlayer.removeAttribute('src');playlistCuePlayer=null}
+ playlistCueItem=null;
+ document.querySelectorAll('.playlistCueBtn').forEach(b=>b.classList.remove('cueActive'));
+}
+async function previewPlaylistCut(item,mode){
+ if(playlistCueItem===item.id+':'+mode){stopPlaylistCue();return}
+ stopPlaylistCue();
+ // Share the explicitly selected, separate monitor output with Sonifex cue.
+ if(!cartCueOutput){toast('Select CUE OUTPUT in the Sonifex header first');return}
+ releaseCartCue();
+ const token=playlistCueToken;
+ const a=new Audio();a.muted=true;playlistCuePlayer=a;playlistCueItem=item.id+':'+mode;
+ try{
+  if(typeof a.setSinkId!=='function')throw Error('Separate audio output not supported');
+  await a.setSinkId(cartCueOutput);
+  if(token!==playlistCueToken)return;
+  const url=item.url||await window.bullCachedAudio?.(item);
+  if(token!==playlistCueToken)return;
+  if(!url)throw Error('No playable audio linked');
+  a.src=url;a.preload='auto';
+  await new Promise((resolve,reject)=>{
+   if(a.readyState>=1){resolve();return}
+   a.onloadedmetadata=resolve;a.onerror=()=>reject(Error('Audio could not be loaded'));
+  });
+  if(token!==playlistCueToken)return;
+  const duration=Number.isFinite(a.duration)?a.duration:Number(item.dur)||0;
+  const start=mode==='end'?Math.max(0,duration-7):Math.max(0,Number(item.cue)||0);
+  const stopAt=mode==='start'?Math.min(duration,start+7):duration;
+  a.currentTime=start;
+  a.ontimeupdate=()=>{if(mode!=='full'&&a.currentTime>=stopAt-0.08&&token===playlistCueToken)stopPlaylistCue()};
+  a.onended=()=>{if(token===playlistCueToken)stopPlaylistCue()};
+  window.bullApplyCutLevel?.(a,item);
+  a.muted=false;await a.play();
+  if(token!==playlistCueToken){a.pause();return}
+  document.querySelectorAll('.playlistCueBtn').forEach(b=>b.classList.toggle('cueActive',b.dataset.cueId===item.id&&b.dataset.mode===mode));
+ }catch(e){if(token===playlistCueToken){stopPlaylistCue();toast('Playlist cue: '+e.message)}}
+}
 function initCartCueOutput(){
  const head=document.querySelector('.cartHead');
  if(!head||document.getElementById('cartCueOutput'))return;
@@ -53,7 +93,16 @@ function linkSpotifyAudio(){
  if(linked){render();toast(linked+' Spotify reference(s) linked to local audio')}
 }
 const saveCarts=()=>localStorage.setItem('eldoret-cart-banks',JSON.stringify(cartBanks));
-function row(x,i){const d=document.createElement('div');d.className='row '+x.type+(i===play?' playing':'')+(x.id===sel?' selected':'');d.draggable=true;d.innerHTML='<div>'+(i===play?'▶':i+1)+'</div><div>--:--</div><div><span class="pill '+x.type+'">'+x.type.toUpperCase()+'</span></div><div><b>'+x.title+'</b><br><small>'+x.artist+'</small><span class="cacheBadge"></span></div><div>'+mm(x.dur)+'</div><div>'+mm(x.intro)+'</div><div>'+mm(x.segue||0)+'</div><div>--:--</div>';d.onclick=()=>{sel=x.id;render();edit()};d.dataset.id=x.id;d.ondragstart=e=>{window.drag=i;e.dataTransfer.setData('application/x-eldoret-row',String(i))};d.ondragover=e=>{e.preventDefault()};d.ondrop=e=>{const raw=e.dataTransfer.getData('application/x-eldoret-spotify');if(raw){e.preventDefault();e.stopPropagation();try{addSpotifyReference(JSON.parse(raw),i)}catch{}return}e.preventDefault();e.stopPropagation();if(Number.isInteger(window.drag)){const [m]=log.splice(window.drag,1);log.splice(i,0,m);render()}};return d}
+function row(x,i){const d=document.createElement('div');d.className='row '+x.type+(i===play?' playing':'')+(x.id===sel?' selected':'');d.draggable=true;d.innerHTML='<div>'+(i===play?'▶':i+1)+'</div><div>--:--</div><div><span class="pill '+x.type+'">'+x.type.toUpperCase()+'</span></div><div><b>'+x.title+'</b><br><small>'+x.artist+'</small><span class="cacheBadge"></span></div><div>'+mm(x.dur)+'</div><div>'+mm(x.intro)+'</div><div>'+mm(x.segue||0)+'</div><div>--:--</div>';const titleCell=d.children[3];const controls=document.createElement('span');controls.className='playlistCueControls';
+for(const [mode,label] of [['full','FULL'],['start','START'],['end','END']]){
+ const btn=document.createElement('button');btn.type='button';btn.className='playlistCueBtn';
+ btn.textContent=label;btn.dataset.mode=mode;btn.dataset.cueId=x.id;
+ btn.title=mode==='full'?'Audition entire cut':mode==='start'?'Audition first 7 seconds':'Audition last 7 seconds';
+ btn.onclick=e=>{e.stopPropagation();previewPlaylistCut(x,mode)};
+ controls.appendChild(btn);
+}
+titleCell.appendChild(controls);
+d.onclick=()=>{sel=x.id;render();edit()};d.dataset.id=x.id;d.ondragstart=e=>{window.drag=i;e.dataTransfer.setData('application/x-eldoret-row',String(i))};d.ondragover=e=>{e.preventDefault()};d.ondrop=e=>{const raw=e.dataTransfer.getData('application/x-eldoret-spotify');if(raw){e.preventDefault();e.stopPropagation();try{addSpotifyReference(JSON.parse(raw),i)}catch{}return}e.preventDefault();e.stopPropagation();if(Number.isInteger(window.drag)){const [m]=log.splice(window.drag,1);log.splice(i,0,m);render()}};return d}
 function render(){window.bullCacheQueue?.(log.filter(x=>x.url).slice(Math.max(0,play+1),Math.max(0,play+1)+2));const r=$('schedule');r.innerHTML='';log.forEach((x,i)=>r.appendChild(row(x,i)));window.bullCacheMark?.();const p=log[play],n=log[play<0?0:play+1];$('nowTitle').textContent=p?.title||'Stopped';$('nowArtist').textContent=p?.artist||'Import audio to begin';$('nextTitle').textContent=n?.title||'Nothing queued';$('nextArtist').textContent=n?.artist||'—';$('nextDuration').textContent=n?mm(n.dur):'00:00';updateDeckDisplay()}
 function updateDeckDisplay(){
  if(window.bullFaderDeckRender?.())return;
