@@ -1,8 +1,18 @@
 /* Sample-peak normalisation. The original file and fade envelopes are unchanged. */
 (()=>{'use strict';
-const KEY='bullshits-cut-levels-v1',DEFAULT=-3,MAX_BOOST=36;
+const KEY='bullshits-cut-levels-v1',DEFAULT=-0.3,MAX_BOOST=36;
 const bindings=new Map();let decoder=null;
 const stored=()=>{try{return JSON.parse(localStorage.getItem(KEY)||'{}')}catch{return {}}};
+// Upgrade previous default targets; retain custom targets and bypass settings.
+{
+ const db=stored();let changed=false;
+ for(const [id,p] of Object.entries(db)){
+  if(p&&p.analysed===true&&p.targetDb===-3&&!p.userAdjusted&&p.defaultVersion!==2){
+   db[id]={...p,targetDb:DEFAULT,defaultVersion:2};changed=true;
+  }
+ }
+ if(changed)try{localStorage.setItem(KEY,JSON.stringify(db))}catch{}
+}
 const clamp=(n,min,max)=>Math.min(max,Math.max(min,n));
 function profile(item){return {enabled:true,targetDb:DEFAULT,...item?.audioLevel,...stored()[item?.audioKey]}}
 function gainFor(p){
@@ -31,7 +41,7 @@ async function analyse(item,file){
  if(!Offline)throw Error('Audio analysis is unavailable in this browser');
  decoder=decoder||new Offline(1,1,48000);
  const decoded=await decoder.decodeAudioData(bytes);
- const p={analysed:true,peakDb:await peakOf(decoded),enabled:true,targetDb:DEFAULT};
+ const p={analysed:true,peakDb:await peakOf(decoded),enabled:true,targetDb:DEFAULT,defaultVersion:2};
  item.audioKey=audioKey;item.audioLevel=p;
  const db=stored();db[audioKey]=p;localStorage.setItem(KEY,JSON.stringify(db));
  return p;
@@ -51,7 +61,7 @@ function find(artist,title,id){
 function editor(box,item){
  const section=document.createElement('section');section.className='bullCutLevel';
  section.style.cssText='border:1px solid #4c718c;border-radius:8px;padding:14px;margin:16px 0;background:#081c2b';
- section.innerHTML='<h3 style="margin:0 0 10px">AUDIO LEVEL · PEAK NORMALISATION</h3><p data-level-status role="status">Reading audio level…</p><label style="display:flex;gap:8px;align-items:center"><input data-level-enabled type="checkbox" style="width:auto"> Normalise this cut</label><label>Target sample peak (dBFS)<input data-level-target type="number" min="-24" max="0" step="0.1" value="-3"></label><input data-level-slider aria-label="Target sample peak in dBFS" type="range" min="-24" max="0" step="0.1" value="-3"><p data-level-gain></p><button type="button" data-level-reset>RESET TO −3 dBFS</button><p style="font-size:12px;color:#a5bdcd">Applies to this audio file in decks, carts and previews. Save the cut card to apply. Original file unchanged. Sample-peak normalisation does not match perceived loudness.</p>';
+ section.innerHTML='<h3 style="margin:0 0 10px">AUDIO LEVEL · PEAK NORMALISATION</h3><p data-level-status role="status">Reading audio level…</p><label style="display:flex;gap:8px;align-items:center"><input data-level-enabled type="checkbox" style="width:auto"> Normalise this cut</label><label>Target sample peak (dBFS)<input data-level-target type="number" min="-24" max="0" step="0.1" value="-0.3"></label><input data-level-slider aria-label="Target sample peak in dBFS" type="range" min="-24" max="0" step="0.1" value="-0.3"><p data-level-gain></p><button type="button" data-level-reset>RESET TO −0.3 dBFS</button><p style="font-size:12px;color:#a5bdcd">Applies to this audio file in decks, carts and previews. Save the cut card to apply. Original file unchanged. Sample-peak normalisation does not match perceived loudness.</p>';
  box.appendChild(section);
  const get=s=>section.querySelector(s),status=get('[data-level-status]'),enabled=get('[data-level-enabled]'),target=get('[data-level-target]'),slider=get('[data-level-slider]'),result=get('[data-level-gain]');
  let p=profile(item),ready=!!p.analysed;
@@ -77,7 +87,7 @@ function editor(box,item){
  return {save(){
   if(!item||!ready)return;
   const n=Number(target.value);if(target.value.trim()===''||!Number.isFinite(n)||n< -24||n>0)throw Error('Level target must be between −24 and 0 dBFS');
-  const next={...p,enabled:enabled.checked,targetDb:n},db=stored();db[item.audioKey]=next;localStorage.setItem(KEY,JSON.stringify(db));item.audioLevel=next;
+  const next={...p,enabled:enabled.checked,targetDb:n,userAdjusted:n!==DEFAULT,defaultVersion:2},db=stored();db[item.audioKey]=next;localStorage.setItem(KEY,JSON.stringify(db));item.audioLevel=next;
   for(const [audio,cut] of [...bindings])if(cut.audioKey===item.audioKey)apply(audio,cut);
  }};
 }
