@@ -53,6 +53,17 @@
   }
   requestAnimationFrame(frame);
  }
+ // Publish measured samples independently of animation frames (which pause in hidden tabs).
+ const levelKey='bullshits-audio-levels-v1';
+ let levelBus=null,lastStored=0;
+ try{levelBus=new BroadcastChannel(levelKey)}catch(e){}
+ function publishLevels(){
+  const db=analysers.map(a=>{let peak=0;const data=new Float32Array(a.fftSize);if(ctx?.state==='running'){a.getFloatTimeDomainData(data);for(const x of data)peak=Math.max(peak,Math.abs(x))}return peak>0?20*Math.log10(peak):-100});
+  const packet={kind:'software-levels',at:Date.now(),db:db.length===2?db:[-100,-100],state:ctx?.state||'unavailable'};
+  try{levelBus?.postMessage(packet);if(Date.now()-lastStored>=1000){localStorage.setItem(levelKey,JSON.stringify(packet));lastStored=Date.now()}}catch(e){}
+ }
+ setInterval(publishLevels,100);publishLevels();
  frame();
 })();
+
 
