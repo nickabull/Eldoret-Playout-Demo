@@ -118,9 +118,11 @@
 /* Airlite input: existing CH4 start plus A/B programmable buttons. */
 (()=>{'use strict';
 const bar=document.createElement('div');
-bar.style.cssText='position:fixed;right:12px;bottom:58px;z-index:9998;max-width:440px;background:#10263b;color:#eaf6ff;border:1px solid #5c93b4;border-radius:9px;padding:9px 12px;font:12px Arial;box-shadow:0 5px 18px #0008';
-bar.innerHTML='<strong>AIRLITE · CART BUTTONS</strong> <button id="airliteTestConnect" style="margin-left:8px;padding:6px">CONNECT</button> <button id="airliteDisconnect" disabled style="padding:6px">DISCONNECT</button><div style="margin-top:7px"><label><input id="airliteTestArm" type="checkbox" disabled> ARM CH4 START</label> <label><input id="airliteCartArm" type="checkbox" disabled> ARM CART BUTTONS</label></div><div style="margin-top:6px">A1 → Cart 1 · A2 → Cart 2 · A3 → Cart 3 (current bank)</div><div id="airliteTestStatus" style="margin-top:6px" aria-live="polite">Disconnected · buttons v1</div>';
+bar.style.cssText='position:fixed;right:12px;top:48px;z-index:9998;max-width:min(440px,calc(100vw - 48px));background:#10263b;color:#eaf6ff;border:1px solid #5c93b4;border-radius:9px;padding:9px 12px;font:12px Arial;box-shadow:0 5px 18px #0008';
+bar.innerHTML='<strong>AIRLITE · CART BUTTONS</strong> <button id="airlitePanelToggle" type="button" aria-expanded="true" style="padding:6px">HIDE</button><div id="airlitePanelBody" style="margin-top:7px"><button id="airliteTestConnect" style="margin-left:8px;padding:6px">CONNECT</button> <button id="airliteDisconnect" disabled style="padding:6px">DISCONNECT</button><div style="margin-top:7px"><label><input id="airliteTestArm" type="checkbox" disabled> ARM CH4 START</label> <label><input id="airliteCartArm" type="checkbox" disabled> ARM CART BUTTONS</label></div><div style="margin-top:6px">A1 → Cart 1 · A2 → Cart 2 · A3 → Cart 3 (current bank)</div><div id="airliteTestStatus" style="margin-top:6px" aria-live="polite">Disconnected · buttons v1</div></div>';
 document.body.append(bar);
+const panelToggle=bar.querySelector('#airlitePanelToggle'),panelBody=bar.querySelector('#airlitePanelBody');
+panelToggle.onclick=()=>{panelBody.hidden=!panelBody.hidden;panelToggle.textContent=panelBody.hidden?'SHOW':'HIDE';panelToggle.setAttribute('aria-expanded',String(!panelBody.hidden))};
 let device=null,previous=null,buttonMasks=[0,0];
 const status=bar.querySelector('#airliteTestStatus'),arm=bar.querySelector('#airliteTestArm'),cartArm=bar.querySelector('#airliteCartArm'),connect=bar.querySelector('#airliteTestConnect'),disconnect=bar.querySelector('#airliteDisconnect');
 function reset(){previous=null;buttonMasks=[0,0];arm.checked=false;cartArm.checked=false;}
