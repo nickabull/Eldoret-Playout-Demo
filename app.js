@@ -185,7 +185,16 @@ b.querySelector('.sfStatus').setAttribute('role','button');b.querySelector('.sfS
 b.querySelector('.sfStatus').setAttribute('aria-pressed',String(cartCueKey===activeBank+'-'+i));
 b.querySelector('.sfStatus').onclick=e=>{e.stopPropagation();toggleCartCue(i)};
 b.querySelector('.sfStatus').onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();toggleCartCue(i)}};b.querySelector('.sfPlay').onclick=e=>{e.stopPropagation();if(!playing)startCart(i)};b.querySelector('.sfStop').onclick=e=>{e.stopPropagation();if(playing)toggleCart(i)};b.querySelector('.sfFast').onclick=e=>{e.stopPropagation();openCartEditor(i)};}else{b.style.background=cfg?.color||defaultColors[i%defaultColors.length];b.innerHTML='<span class="cartMachine">HOTKEY</span><span class="cartName"></span><span class="cartTime"></span><span class="cartState"></span><span class="cartLamp">▶</span>';b.querySelector('.cartName').textContent=cfg?.name||('CART '+(i+1));b.querySelector('.cartTime').textContent=duration;b.querySelector('.cartState').textContent=playing?'ON AIR':src?'READY':'EMPTY';b.onclick=()=>toggleCart(i)}b.ondragover=e=>{e.preventDefault();b.classList.add('dragover')};b.ondragleave=()=>b.classList.remove('dragover');b.ondrop=e=>{e.preventDefault();b.classList.remove('dragover');(()=>{const dt=e.dataTransfer;const row=dt.getData('application/x-eldoret-row');const id=dt.getData('text/plain');const item=row!==''?log[Number(row)]:lib.find(x=>x.id===id);const match=item&&(lib.find(x=>x.id===item.id)||lib.find(x=>x.url&&x.url===item.url)||matchAudio(item));if(match?.id)assignCart(i,match.id);else toast('Drop playable imported audio onto a Sonifex cart')})()};b.oncontextmenu=e=>{e.preventDefault();openCartEditor(i)};root.appendChild(b)}}
-function toggleCart(slot){const key=activeBank+'-'+slot;if(cartCueKey===key)releaseCartCue();cfg=getCart(slot),src=cfg&&lib.find(v=>v.id===cfg.libId);if(!src)return toast('Drag audio from the library onto this cart');const old=cartPlayers[key];if(old&&!old.paused){old.pause();old.currentTime=0;renderCarts();return}const a=new Audio(src.url);window.bullApplyCutLevel?.(a,src);a.loop=!!cfg.loop;cartPlayers[key]=a;window.eldoretMeterRegister?.(a);a.ontimeupdate=renderCarts;a.onended=()=>{window.bullLog?.('ENDED',{fader:'D',title:src.title,artist:src.artist||'',source:'SONIFEX'});renderCarts()};a._bullStarting=true;a.play().then(()=>window.bullLog?.('PLAY',{fader:'D',title:src.title,artist:src.artist||'',duration:src.dur||0,source:'SONIFEX'})).catch(e=>window.bullLog?.('FAILED',{fader:'D',title:src.title,reason:e.message})).finally(()=>{a._bullStarting=false;renderCarts()});renderCarts()}
+function toggleCart(slot){
+ const key=activeBank+'-'+slot;if(cartCueKey===key)releaseCartCue();
+ const cfg=getCart(slot),src=cfg&&lib.find(v=>v.id===cfg.libId);if(!src)return toast('Drag audio from the library onto this cart');
+ const old=cartPlayers[key];if(old&&!old.paused){old.pause();old.currentTime=0;renderCarts();return}
+ const bank=activeBank+1,source=cartView==='hotkeys'?'HOTKEY':'SONIFEX';
+ const info={fader:'CART '+(slot+1),channelId:'CART:'+bank+':'+(slot+1),cart:slot+1,bank,title:src.title,artist:src.artist||'',duration:src.dur||0,source,audioKey:src.audioKey||''};
+ const a=new Audio(src.url);window.bullTrackPlayback?.(a,info);window.bullApplyCutLevel?.(a,src);a.loop=!!cfg.loop;cartPlayers[key]=a;window.eldoretMeterRegister?.(a);
+ a.ontimeupdate=renderCarts;a.onended=renderCarts;a._bullStarting=true;
+ a.play().catch(e=>{if(!a.error)window.bullLog?.('FAILED',{...info,reason:e.message})}).finally(()=>{a._bullStarting=false;renderCarts()});renderCarts();
+}
 // Hardware starts are play-only: a second press cannot stop a running cart.
 function startCart(slot){
  const player=cartPlayers[activeBank+'-'+slot];
@@ -200,7 +209,7 @@ function stopCart(slot){
  player.pause();
  player.currentTime=0;
  const cfg=getCart(slot),src=cfg&&lib.find(v=>v.id===cfg.libId);
- window.bullLog?.('STOP',{fader:'D',title:src?.title||'',artist:src?.artist||'',source:'SONIFEX',cart:slot+1,bank:activeBank+1});
+ // The audio pause event records the stop before rewind.
  renderCarts();
 }
 function openCartEditor(slot){editingCart=slot;const cfg=getCart(slot)||{};$('cartName').value=cfg.name||('CART '+(slot+1));$('cartColor').value=cfg.color||defaultColors[slot%defaultColors.length];$('cartLoop').checked=!!cfg.loop;$('cartModal').classList.remove('hidden')}
@@ -404,3 +413,4 @@ window.bullLibraryReady=(async()=>{
   if(saved.length)$('status').textContent='Restored '+saved.length+' saved cuts · ready';
  }catch(err){window.bullAudioLibrary?.status('Saved library unavailable: '+err.message+' · imports will report whether they are saved')}
 })();
+

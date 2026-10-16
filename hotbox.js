@@ -3,6 +3,7 @@
  const panel=document.getElementById('hotbox');if(!panel)return;
  const audio=new Audio();audio.preload='auto';window.eldoretMeterRegister?.(audio);
  let loaded=null,playing=false;
+ window.bullTrackPlayback?.(audio,()=>({fader:'C',channelId:'C',title:loaded?.title||'',artist:loaded?.artist||'',duration:loaded?.dur||0,source:'HOTBOX',audioKey:loaded?.audioKey||''}));
  const name=document.getElementById('hotTitle'),detail=document.getElementById('hotDetail'),playBtn=document.getElementById('hotPlay'),stopBtn=document.getElementById('hotStop'),clearBtn=document.getElementById('hotClear');
  function state(){name.textContent=loaded?.title||'Drop audio here';detail.textContent=loaded?(loaded.artist||'')+(loaded.url?' · READY':' · AUDIO MISSING'):'From library, playlist or Fader D carts';playBtn.disabled=!loaded?.url;playBtn.textContent=playing?'❚❚ PAUSE':'▶ PLAY';panel.classList.toggle('hotPlaying',playing)}
  function load(x){if(!x)return;audio.pause();playing=false;loaded={...x,title:x.title||x.name||'Untitled',artist:x.artist||'',url:x.url||null,start:x.markers?.start??x.cue??0};audio.removeAttribute('src');if(loaded.url){audio.src=loaded.url;audio.load()}state()}
@@ -25,14 +26,14 @@
   window.bullApplyCutLevel?.(audio,loaded);
   await window.bullResumeAudio?.();
   await audio.play();playing=true;state();
-  window.bullLog?.('PLAY',{fader:'C',title:loaded.title,artist:loaded.artist||'',source:'HOTBOX'});
- }catch(e){toast('Hotbox play failed: '+e.message)}
+
+ }catch(e){if(!audio.error)window.bullLog?.('FAILED',{fader:'C',source:'HOTBOX',title:loaded.title,artist:loaded.artist||'',reason:e.message});toast('Hotbox play failed: '+e.message)}
 }
 function stopHotbox(){
  if(!loaded)return;
  const wasPlaying=!audio.paused;
  audio.pause();audio.currentTime=loaded.start||0;playing=false;state();
- if(wasPlaying)window.bullLog?.('STOP',{fader:'C',title:loaded.title,artist:loaded.artist||'',source:'HOTBOX'});
+
 }
 playBtn.onclick=startHotbox;
  stopBtn.onclick=stopHotbox;
@@ -54,4 +55,5 @@ window.bullHotboxStop=stopHotbox;
  const observer=new MutationObserver(makeCartsDraggable);observer.observe(carts,{childList:true});makeCartsDraggable();
  state();
 })();
+
 
