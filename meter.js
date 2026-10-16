@@ -3,22 +3,37 @@
  const canvas=document.getElementById('masterMeter');if(!canvas)return;
  const label=document.getElementById('meterStatus');
  let ctx=null,analyser=null,sourceCount=0,ready=false;
- const registered=new WeakMap();
+ const registered=new WeakMap(),outputs=new Set();
  function init(){
   if(ctx)return true;
-  try{ctx=new (window.AudioContext||window.webkitAudioContext)();analyser=ctx.createAnalyser();analyser.fftSize=2048;analyser.smoothingTimeConstant=.12;analyser.connect(ctx.destination);ready=true;label.textContent='SOFTWARE MIX · A/B/C/D';return true}
+  try{ctx=new (window.AudioContext||window.webkitAudioContext)();analyser=ctx.createAnalyser();analyser.fftSize=2048;analyser.smoothingTimeConstant=.12;ready=true;label.textContent='SOFTWARE MIX · A/B/C/D';return true}
   catch(e){label.textContent='Audio metering unavailable';return false}
  }
  function register(el){
   if(!el||registered.has(el)||!init())return;
-  try{const source=ctx.createMediaElementSource(el);const gain=ctx.createGain();source.connect(gain);gain.connect(analyser);registered.set(el,gain);sourceCount++;ctx.resume().catch(()=>{})}
+  try{const source=ctx.createMediaElementSource(el);const gain=ctx.createGain();source.connect(gain);gain.connect(analyser);gain.connect(ctx.destination);registered.set(el,gain);sourceCount++;ctx.resume().catch(()=>{})}
   catch(e){console.warn('Eldoret meter source',e)}
  }
  window.eldoretMeterRegister=register;
  window.bullAudioGain=(el,value)=>{register(el);const node=registered.get(el);if(!node)throw Error('Audio gain unavailable');node.gain.cancelScheduledValues(ctx.currentTime);if(el.paused)node.gain.setValueAtTime(value,ctx.currentTime);else node.gain.setTargetAtTime(value,ctx.currentTime,.01)};
  window.bullResumeAudio=async()=>{if(!init())throw Error('Audio engine unavailable');if(ctx.state!=='running')await ctx.resume();if(ctx.state!=='running')throw Error('Audio engine '+ctx.state);return ctx.state};
  window.bullAudioEngineState=()=>ctx?.state||'not initialized';
+ const routes=new WeakMap();
+ window.bullRouteAudio=async(el,sinkId)=>{
+  register(el);const gain=registered.get(el);if(!gain)throw Error('Audio player is not registered');
+  await window.bullResumeAudio();
+  const previous=routes.get(el);
+  if(!sinkId){if(previous){gain.disconnect(previous.destination);previous.player.pause();previous.player.srcObject=null;outputs.delete(previous.player);routes.delete(el);gain.connect(ctx.destination)}return}
+  const player=new Audio();if(typeof player.setSinkId!=='function')throw Error('Output selection unavailable in this browser');
+  const destination=ctx.createMediaStreamDestination();player.srcObject=destination.stream;
+  try{await player.setSinkId(sinkId);await player.play()}catch(e){player.pause();player.srcObject=null;throw e}
+  // Commit the new route only after the receiving output is running.
+  if(previous){gain.disconnect(previous.destination);previous.player.pause();previous.player.srcObject=null;outputs.delete(previous.player)}else gain.disconnect(ctx.destination);
+  gain.connect(destination);outputs.add(player);routes.set(el,{destination,player});
+ };
+ window.bullRecoverAudio=async()=>{await window.bullResumeAudio();for(const player of outputs)await player.play();return ctx.state};
  document.addEventListener('pointerdown',()=>{if(ctx?.state==='suspended')ctx.resume().catch(()=>{})},{passive:true});
+ document.addEventListener('keydown',()=>{if(ctx?.state==='suspended')ctx.resume().catch(()=>{})},{passive:true});
  register(document.getElementById('deckA'));register(document.getElementById('deckB'));
  const left=new Float32Array(2048),right=new Float32Array(2048);
  // Stereo analyser: split left and right before destination to retain channel separation.
@@ -27,7 +42,7 @@
   analyser.disconnect();analyser.connect(splitter);
   for(let ch=0;ch<2;ch++){const a=ctx.createAnalyser();a.fftSize=2048;a.smoothingTimeConstant=0;splitter.connect(a,ch);analysers.push(a)}
   // Keep audio audible by passing the original stereo signal to speakers.
-  analyser.connect(ctx.destination);
+  // Metering is a silent tap; each player has its own audible output route.
  }catch(e){console.warn(e)}}
  const g=canvas.getContext('2d'),w=canvas.width,h=canvas.height;
  const peaks=[0,0],holds=[0,0],holdUntil=[0,0];
@@ -65,5 +80,6 @@
  setInterval(publishLevels,100);publishLevels();
  frame();
 })();
+
 
 
