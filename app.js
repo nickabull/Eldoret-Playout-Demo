@@ -8,6 +8,38 @@ const defaultColors=['#cb3b3b','#2466be','#d4831a','#209c58','#7c4dc2','#4a5c70'
 let cartBanks=JSON.parse(localStorage.getItem('eldoret-cart-banks')||'null')||Array.from({length:BANKS},()=>Array.from({length:SLOTS},()=>null));
 const cartPlayers={};
 let cartCountDown=true;
+let cartCueKey=null,cartCuePlayer=null,cartCueOutput=null;
+function releaseCartCue(){
+ if(cartCuePlayer){cartCuePlayer.pause();cartCuePlayer.src='';cartCuePlayer=null}
+ cartCueKey=null;renderCarts();
+}
+async function chooseCartCueOutput(){
+ if(!navigator.mediaDevices?.selectAudioOutput||!HTMLMediaElement.prototype.setSinkId){toast('Separate CUE output unavailable in this browser');return}
+ try{const device=await navigator.mediaDevices.selectAudioOutput();cartCueOutput=device.deviceId;releaseCartCue();toast('CUE output selected: '+device.label)}
+ catch(e){if(e.name!=='NotAllowedError')toast('CUE output: '+e.message)}
+}
+async function toggleCartCue(i){
+ const key=activeBank+'-'+i,cfg=getCart(i),src=cfg&&lib.find(x=>x.id===cfg.libId);
+ if(cartCueKey===key){releaseCartCue();return}
+ if(!src){toast('Load audio into this cart first');return}
+ if(!cartCueOutput){toast('Choose CUE OUTPUT first');return}
+ releaseCartCue();
+ const audio=new Audio();audio.muted=true;cartCuePlayer=audio;cartCueKey=key;
+ try{
+  await audio.setSinkId(cartCueOutput);
+  if(cartCuePlayer!==audio)return;
+  audio.src=src.url;window.bullApplyCutLevel?.(audio,src);
+  audio.onended=()=>{if(cartCuePlayer===audio)releaseCartCue()};
+  audio.muted=false;await audio.play();
+  renderCarts();
+ }catch(e){if(cartCuePlayer===audio)releaseCartCue();toast('CUE preview failed: '+e.message)}
+}
+function initCartCueOutput(){
+ const head=document.querySelector('.cartHead');
+ if(!head||document.getElementById('cartCueOutput'))return;
+ const btn=document.createElement('button');btn.id='cartCueOutput';btn.textContent='CUE OUTPUT';btn.title='Choose separate monitor/headphones for cart cue; never sends cue to default main output';btn.onclick=chooseCartCueOutput;head.appendChild(btn);
+}
+
 
 const mm=s=>String(Math.floor(s/60)).padStart(2,'0')+':'+String(Math.floor(s%60)).padStart(2,'0');
 const norm=s=>String(s||'').toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g,'').replace(/\([^)]*\)|\[[^\]]*\]/g,'').replace(/[^a-z0-9]+/g,' ').trim();
@@ -97,9 +129,14 @@ function cartLabelColour(cfg){
  if(!cartLabelPalette.includes(cfg.labelColor)){cfg.labelColor=randomCartLabelColour();saveCarts()}
  return cfg.labelColor;
 }
-function assignCart(slot,libId){const x=lib.find(v=>v.id===libId);if(!x)return;cartBanks[activeBank][slot]={libId,name:x.title,color:defaultColors[slot%defaultColors.length],labelColor:randomCartLabelColour(),loop:false};saveCarts();renderCarts()}
-function renderCarts(){const root=$('carts');root.innerHTML='';for(let i=0;i<(cartView==='machines'?3:SLOTS);i++){const cfg=getCart(i),src=cfg&&lib.find(v=>v.id===cfg.libId);const b=document.createElement('div');b.className='cart';b.dataset.slot=i;const player=cartPlayers[activeBank+'-'+i];const playing=player&&!player.paused;b.classList.toggle('playing',!!playing);const duration=src?mm(playing?(cartCountDown?Math.max(0,(src.dur||player.duration||0)-player.currentTime):player.currentTime):(cartCountDown?src.dur:0)):'--:--';if(cartView==='machines'){b.classList.add('sonifexFace');b.classList.toggle('loaded',!!src);b.innerHTML='<div class="sfSlot"><span class="sfMechanism">▰ ▰ ▰</span><span class="sfTape"></span><span class="sfCassette"><span class="sfCassetteLabel"></span><span class="sfCassetteReel">◉</span></span></div><div class="sfLogo"><strong>CART '+(i+1)+'</strong><small>BULL\'SHITS</small></div><div class="sfStop"><small>STOP</small><span>■</span></div><div class="sfPlay"><small>PLAY</small><span>▶</span></div><div class="sfTime"><strong class="cartTime"></strong></div><div class="sfFast"><small>FAST</small><span>▶▶</span></div><div class="sfTitle"></div><div class="sfStatus"></div>';b.querySelector('.cartTime').textContent=duration;b.querySelector('.sfCassetteLabel').replaceChildren();if(src){b.querySelector('.sfCassetteLabel').style.setProperty('background',cartLabelColour(cfg),'important');const artist=document.createElement('span');artist.className='sfArtistLine';artist.textContent=src.artist||'Unknown artist';const title=document.createElement('span');title.className='sfTitleLine';title.textContent=src.title||cfg?.name||'Untitled';b.querySelector('.sfCassetteLabel').append(artist,title)}else b.querySelector('.sfCassetteLabel').textContent='';b.querySelector('.sfTitle').textContent='';b.querySelector('.sfStatus').textContent=playing?'ON AIR':src?'READY':'EMPTY';b.querySelector('.sfPlay').onclick=e=>{e.stopPropagation();if(!playing)toggleCart(i)};b.querySelector('.sfStop').onclick=e=>{e.stopPropagation();if(playing)toggleCart(i)};b.querySelector('.sfFast').onclick=e=>{e.stopPropagation();openCartEditor(i)};}else{b.style.background=cfg?.color||defaultColors[i%defaultColors.length];b.innerHTML='<span class="cartMachine">HOTKEY</span><span class="cartName"></span><span class="cartTime"></span><span class="cartState"></span><span class="cartLamp">▶</span>';b.querySelector('.cartName').textContent=cfg?.name||('CART '+(i+1));b.querySelector('.cartTime').textContent=duration;b.querySelector('.cartState').textContent=playing?'ON AIR':src?'READY':'EMPTY';b.onclick=()=>toggleCart(i)}b.ondragover=e=>{e.preventDefault();b.classList.add('dragover')};b.ondragleave=()=>b.classList.remove('dragover');b.ondrop=e=>{e.preventDefault();b.classList.remove('dragover');(()=>{const dt=e.dataTransfer;const row=dt.getData('application/x-eldoret-row');const id=dt.getData('text/plain');const item=row!==''?log[Number(row)]:lib.find(x=>x.id===id);const match=item&&(lib.find(x=>x.id===item.id)||lib.find(x=>x.url&&x.url===item.url)||matchAudio(item));if(match?.id)assignCart(i,match.id);else toast('Drop playable imported audio onto a Sonifex cart')})()};b.oncontextmenu=e=>{e.preventDefault();openCartEditor(i)};root.appendChild(b)}}
-function toggleCart(slot){const key=activeBank+'-'+slot,cfg=getCart(slot),src=cfg&&lib.find(v=>v.id===cfg.libId);if(!src)return toast('Drag audio from the library onto this cart');const old=cartPlayers[key];if(old&&!old.paused){old.pause();old.currentTime=0;renderCarts();return}const a=new Audio(src.url);window.bullApplyCutLevel?.(a,src);a.loop=!!cfg.loop;cartPlayers[key]=a;window.eldoretMeterRegister?.(a);a.ontimeupdate=renderCarts;a.onended=()=>{window.bullLog?.('ENDED',{fader:'D',title:src.title,artist:src.artist||'',source:'SONIFEX'});renderCarts()};a._bullStarting=true;a.play().then(()=>window.bullLog?.('PLAY',{fader:'D',title:src.title,artist:src.artist||'',duration:src.dur||0,source:'SONIFEX'})).catch(e=>window.bullLog?.('FAILED',{fader:'D',title:src.title,reason:e.message})).finally(()=>{a._bullStarting=false;renderCarts()});renderCarts()}
+function assignCart(slot,libId){if(cartCueKey===activeBank+'-'+slot)releaseCartCue();const x=lib.find(v=>v.id===libId);if(!x)return;cartBanks[activeBank][slot]={libId,name:x.title,color:defaultColors[slot%defaultColors.length],labelColor:randomCartLabelColour(),loop:false};saveCarts();renderCarts()}
+function renderCarts(){const root=$('carts');root.innerHTML='';for(let i=0;i<(cartView==='machines'?3:SLOTS);i++){const cfg=getCart(i),src=cfg&&lib.find(v=>v.id===cfg.libId);const b=document.createElement('div');b.className='cart';b.dataset.slot=i;const player=cartPlayers[activeBank+'-'+i];const playing=player&&!player.paused;b.classList.toggle('playing',!!playing);b.classList.toggle('cartCued',cartCueKey===activeBank+'-'+i);const duration=src?mm(playing?(cartCountDown?Math.max(0,(src.dur||player.duration||0)-player.currentTime):player.currentTime):(cartCountDown?src.dur:0)):'--:--';if(cartView==='machines'){b.classList.add('sonifexFace');b.classList.toggle('loaded',!!src);b.innerHTML='<div class="sfSlot"><span class="sfMechanism">▰ ▰ ▰</span><span class="sfTape"></span><span class="sfCassette"><span class="sfCassetteLabel"></span><span class="sfCassetteReel">◉</span></span></div><div class="sfLogo"><strong>CART '+(i+1)+'</strong><small>BULL\'SHITS</small></div><div class="sfStop"><small>STOP</small><span>■</span></div><div class="sfPlay"><small>PLAY</small><span>▶</span></div><div class="sfTime"><strong class="cartTime"></strong></div><div class="sfFast"><small>FAST</small><span>▶▶</span></div><div class="sfTitle"></div><div class="sfStatus"></div>';b.querySelector('.cartTime').textContent=duration;b.querySelector('.sfCassetteLabel').replaceChildren();if(src){b.querySelector('.sfCassetteLabel').style.setProperty('background',cartLabelColour(cfg),'important');const artist=document.createElement('span');artist.className='sfArtistLine';artist.textContent=src.artist||'Unknown artist';const title=document.createElement('span');title.className='sfTitleLine';title.textContent=src.title||cfg?.name||'Untitled';b.querySelector('.sfCassetteLabel').append(artist,title)}else b.querySelector('.sfCassetteLabel').textContent='';b.querySelector('.sfTitle').textContent='';b.querySelector('.sfStatus').textContent=playing?'ON AIR':cartCueKey===activeBank+'-'+i?'CUE':src?'READY':'EMPTY';
+b.querySelector('.sfStatus').classList.toggle('cueReady',cartCueKey===activeBank+'-'+i);
+b.querySelector('.sfStatus').setAttribute('role','button');b.querySelector('.sfStatus').tabIndex=src?0:-1;
+b.querySelector('.sfStatus').setAttribute('aria-pressed',String(cartCueKey===activeBank+'-'+i));
+b.querySelector('.sfStatus').onclick=e=>{e.stopPropagation();toggleCartCue(i)};
+b.querySelector('.sfStatus').onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();toggleCartCue(i)}};b.querySelector('.sfPlay').onclick=e=>{e.stopPropagation();if(!playing)startCart(i)};b.querySelector('.sfStop').onclick=e=>{e.stopPropagation();if(playing)toggleCart(i)};b.querySelector('.sfFast').onclick=e=>{e.stopPropagation();openCartEditor(i)};}else{b.style.background=cfg?.color||defaultColors[i%defaultColors.length];b.innerHTML='<span class="cartMachine">HOTKEY</span><span class="cartName"></span><span class="cartTime"></span><span class="cartState"></span><span class="cartLamp">▶</span>';b.querySelector('.cartName').textContent=cfg?.name||('CART '+(i+1));b.querySelector('.cartTime').textContent=duration;b.querySelector('.cartState').textContent=playing?'ON AIR':src?'READY':'EMPTY';b.onclick=()=>toggleCart(i)}b.ondragover=e=>{e.preventDefault();b.classList.add('dragover')};b.ondragleave=()=>b.classList.remove('dragover');b.ondrop=e=>{e.preventDefault();b.classList.remove('dragover');(()=>{const dt=e.dataTransfer;const row=dt.getData('application/x-eldoret-row');const id=dt.getData('text/plain');const item=row!==''?log[Number(row)]:lib.find(x=>x.id===id);const match=item&&(lib.find(x=>x.id===item.id)||lib.find(x=>x.url&&x.url===item.url)||matchAudio(item));if(match?.id)assignCart(i,match.id);else toast('Drop playable imported audio onto a Sonifex cart')})()};b.oncontextmenu=e=>{e.preventDefault();openCartEditor(i)};root.appendChild(b)}}
+function toggleCart(slot){const key=activeBank+'-'+slot;if(cartCueKey===key)releaseCartCue();cfg=getCart(slot),src=cfg&&lib.find(v=>v.id===cfg.libId);if(!src)return toast('Drag audio from the library onto this cart');const old=cartPlayers[key];if(old&&!old.paused){old.pause();old.currentTime=0;renderCarts();return}const a=new Audio(src.url);window.bullApplyCutLevel?.(a,src);a.loop=!!cfg.loop;cartPlayers[key]=a;window.eldoretMeterRegister?.(a);a.ontimeupdate=renderCarts;a.onended=()=>{window.bullLog?.('ENDED',{fader:'D',title:src.title,artist:src.artist||'',source:'SONIFEX'});renderCarts()};a._bullStarting=true;a.play().then(()=>window.bullLog?.('PLAY',{fader:'D',title:src.title,artist:src.artist||'',duration:src.dur||0,source:'SONIFEX'})).catch(e=>window.bullLog?.('FAILED',{fader:'D',title:src.title,reason:e.message})).finally(()=>{a._bullStarting=false;renderCarts()});renderCarts()}
 // Hardware starts are play-only: a second press cannot stop a running cart.
 function startCart(slot){
  const player=cartPlayers[activeBank+'-'+slot];
@@ -120,12 +157,12 @@ function stopCart(slot){
 function openCartEditor(slot){editingCart=slot;const cfg=getCart(slot)||{};$('cartName').value=cfg.name||('CART '+(slot+1));$('cartColor').value=cfg.color||defaultColors[slot%defaultColors.length];$('cartLoop').checked=!!cfg.loop;$('cartModal').classList.remove('hidden')}
 $('cartCancel').onclick=()=>$('cartModal').classList.add('hidden');
 $('cartSave').onclick=()=>{const cfg=getCart(editingCart);if(cfg){cfg.name=$('cartName').value;cfg.color=$('cartColor').value;cfg.loop=$('cartLoop').checked;saveCarts();renderCarts()}$('cartModal').classList.add('hidden')};
-$('cartClear').onclick=()=>{const key=activeBank+'-'+editingCart;cartPlayers[key]?.pause();cartPlayers[key]=null;cartBanks[activeBank][editingCart]=null;saveCarts();renderCarts();$('cartModal').classList.add('hidden')};
-document.querySelectorAll('.bank').forEach(b=>b.onclick=()=>{activeBank=Number(b.dataset.bank);document.querySelectorAll('.bank').forEach(x=>x.classList.remove('active'));b.classList.add('active');renderCarts()});
+$('cartClear').onclick=()=>{const key=activeBank+'-'+editingCart;if(cartCueKey===key)releaseCartCue();cartPlayers[key]?.pause();cartPlayers[key]=null;cartBanks[activeBank][editingCart]=null;saveCarts();renderCarts();$('cartModal').classList.add('hidden')};
+document.querySelectorAll('.bank').forEach(b=>b.onclick=()=>{releaseCartCue();activeBank=Number(b.dataset.bank);document.querySelectorAll('.bank').forEach(x=>x.classList.remove('active'));b.classList.add('active');renderCarts()});
 
 const toast=m=>{const t=$('toast');t.textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),1300)};
 function tick(){const d=new Date();$('clock').textContent=d.toLocaleTimeString('en-GB',{hour12:false});$('date').textContent=d.toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'});renderCarts()}
-tick();setInterval(tick,1000);library();render();renderCarts();
+tick();setInterval(tick,1000);library();render();renderCarts();initCartCueOutput();
 
 /* Spotify reference integration - metadata/search only, never used as playout audio */
 const SPOTIFY_REDIRECT=location.origin+location.pathname;
