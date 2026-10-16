@@ -109,7 +109,7 @@
 <div id="spotifyListenModal" class="modal hidden"><div class="modalCard spotifyListenCard"><div class="spotifyListenHead"><h3>SPOTIFY — PERSONAL LISTENING</h3><button id="spotifyListenClose">✕ Close</button></div><p>Official Spotify player. Playback requires Spotify login and is separate from Eldoret's playout decks, carts and mixer.</p><iframe id="spotifyListenFrame" title="Spotify personal listening" src="about:blank" width="100%" height="352" frameborder="0" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy"></iframe></div></div><div id="toast"></div>
 <script src="meter.js?v=0.6.45"></script><script src="desk-now-playing.js?v=0.6.45"></script>
 <script src="audit.js?v=0.6.45"></script>
-<script src="safety-cache.js?v=0.6.45"></script><script src="app.js?v=0.6.47-airlite-stops"></script>
+<script src="safety-cache.js?v=0.6.45"></script><script src="app.js?v=0.6.48-airlite-lights"></script>
 <script src="markers.js?v=0.6.45"></script>
 <script src="hotbox.js?v=0.6.45"></script>
 <script src="voice-track.js?v=0.6.45"></script>
@@ -119,13 +119,46 @@
 (()=>{'use strict';
 const bar=document.createElement('div');
 bar.style.cssText='position:fixed;right:12px;top:48px;z-index:9998;max-width:min(440px,calc(100vw - 48px));background:#10263b;color:#eaf6ff;border:1px solid #5c93b4;border-radius:9px;padding:9px 12px;font:12px Arial;box-shadow:0 5px 18px #0008';
-bar.innerHTML='<strong>AIRLITE · CART BUTTONS</strong> <button id="airlitePanelToggle" type="button" aria-expanded="true" style="padding:6px">HIDE</button><div id="airlitePanelBody" style="margin-top:7px"><button id="airliteTestConnect" style="margin-left:8px;padding:6px">CONNECT</button> <button id="airliteDisconnect" disabled style="padding:6px">DISCONNECT</button><div style="margin-top:7px"><label><input id="airliteTestArm" type="checkbox" disabled> ARM CH4 START</label> <label><input id="airliteCartArm" type="checkbox" disabled> ARM CART BUTTONS</label></div><div style="margin-top:6px">A1–A3 → START Carts 1–3 · B1–B3 → STOP / REWIND (current bank)</div><div id="airliteTestStatus" style="margin-top:6px" aria-live="polite">Disconnected · buttons v1</div></div>';
+bar.innerHTML='<strong>AIRLITE · CART BUTTONS</strong> <button id="airlitePanelToggle" type="button" aria-expanded="true" style="padding:6px">HIDE</button><div id="airlitePanelBody" style="margin-top:7px"><button id="airliteTestConnect" style="margin-left:8px;padding:6px">CONNECT</button> <button id="airliteDisconnect" disabled style="padding:6px">DISCONNECT</button><div style="margin-top:7px"><label><input id="airliteTestArm" type="checkbox" disabled> ARM CH4 START</label> <label><input id="airliteCartArm" type="checkbox" disabled> ARM CART BUTTONS</label></div><div style="margin-top:6px"><label><input id="airliteLedEnable" type="checkbox" disabled> SYNC CART LIGHTS</label><span id="airliteLedStatus" style="margin-left:8px">Lights off</span></div><div style="margin-top:6px">A1–A3 → START Carts 1–3 · B1–B3 → STOP / REWIND (current bank)</div><div id="airliteTestStatus" style="margin-top:6px" aria-live="polite">Disconnected · buttons v1</div></div>';
 document.body.append(bar);
 const panelToggle=bar.querySelector('#airlitePanelToggle'),panelBody=bar.querySelector('#airlitePanelBody');
 panelToggle.onclick=()=>{panelBody.hidden=!panelBody.hidden;panelToggle.textContent=panelBody.hidden?'SHOW':'HIDE';panelToggle.setAttribute('aria-expanded',String(!panelBody.hidden))};
 let device=null,previous=null,buttonMasks=[0,0];
 const status=bar.querySelector('#airliteTestStatus'),arm=bar.querySelector('#airliteTestArm'),cartArm=bar.querySelector('#airliteCartArm'),connect=bar.querySelector('#airliteTestConnect'),disconnect=bar.querySelector('#airliteDisconnect');
-function reset(){previous=null;buttonMasks=[0,0];arm.checked=false;cartArm.checked=false;}
+
+// D&R Airlite USB HID Control Protocol v1.5, sections 3 and 4.1.1:
+// report 0; fixed 10-byte data; [size=4, command=2, LED ID, colour].
+// Only the individual A1–A3 and B1–B3 LED IDs are written.
+const ledEnable=bar.querySelector('#airliteLedEnable'),ledStatus=bar.querySelector('#airliteLedStatus');
+let ledWork=Promise.resolve(),ledVersion=0,ledOwned=false;
+const ledSent=new Map();
+function reset(){previous=null;buttonMasks=[0,0];arm.checked=false;cartArm.checked=false;ledVersion++;ledSent.clear();ledOwned=false;ledEnable.checked=false;ledStatus.textContent='Lights off';}
+function syncLights(clear=false){
+ if(!device?.opened||(!ledEnable.checked&&!ledOwned&&!clear))return ledWork;
+ const target=device,version=ledVersion,states=window.bullCartStates?.()||[];
+ for(let slot=0;slot<3;slot++){
+  const state=states[slot]||{},playing=!!state.playing;
+  const colours=clear||!ledEnable.checked?[0,0]:[playing?1:state.loaded?2:0,playing?1:0];
+  for(const [id,colour] of [[slot,colours[0]],[slot+8,colours[1]]]){
+   if(ledSent.get(id)===colour)continue;
+   ledSent.set(id,colour);
+   ledWork=ledWork.then(async()=>{
+    if(version!==ledVersion||device!==target||!target.opened)return;
+    const packet=new Uint8Array(10);packet.set([4,2,id,colour]);
+    await target.sendReport(0,packet);
+    ledStatus.textContent=ledEnable.checked?'Light commands sent · green READY / red PLAYING':'Cart lights cleared';
+   }).catch(err=>{
+    if(version!==ledVersion)return;
+    ledVersion++;ledSent.clear();ledOwned=false;ledEnable.checked=false;
+    ledStatus.textContent='Light command failed: '+err.message;
+   });
+  }
+ }
+ if(clear||!ledEnable.checked)ledOwned=false;
+ return ledWork;
+}
+ledEnable.onchange=()=>{if(ledEnable.checked){ledOwned=true;ledSent.clear();}syncLights()};
+setInterval(()=>{syncLights()},200);
 function report(e){
  const bytes=Array.from(new Uint8Array(e.data.buffer,e.data.byteOffset,e.data.byteLength));
  // Monitor recordings include the protocol header in data, with reportId 0.
@@ -159,14 +192,14 @@ connect.onclick=async()=>{
   if(!found.length)return;
   if(device)device.removeEventListener('inputreport',report);
   device=found[0];if(!device.opened)await device.open();
-  reset();device.addEventListener('inputreport',report);arm.disabled=false;cartArm.disabled=false;disconnect.disabled=false;
+  reset();device.addEventListener('inputreport',report);arm.disabled=false;cartArm.disabled=false;ledEnable.disabled=false;disconnect.disabled=false;
   // Resume the browser audio engine during this user click, before HID starts.
   try{await window.bullResumeAudio?.()}catch{}
   status.textContent='Connected · tick ARM CART BUTTONS to enable A1–A3';connect.textContent='RECONNECT';
  }catch(err){status.textContent='Connection failed: '+err.message}
 };
-function disconnected(){if(device)device.removeEventListener('inputreport',report);device=null;reset();arm.disabled=true;cartArm.disabled=true;disconnect.disabled=true;connect.textContent='CONNECT';status.textContent='Disconnected · buttons v1';}
-disconnect.onclick=async()=>{const old=device;disconnected();try{if(old?.opened)await old.close()}catch(err){status.textContent='Disconnected: '+err.message}};
+function disconnected(){if(device)device.removeEventListener('inputreport',report);device=null;reset();arm.disabled=true;cartArm.disabled=true;ledEnable.disabled=true;disconnect.disabled=true;connect.textContent='CONNECT';status.textContent='Disconnected · buttons v1';}
+disconnect.onclick=async()=>{const old=device;ledEnable.checked=false;await syncLights(true);disconnected();try{if(old?.opened)await old.close()}catch(err){status.textContent='Disconnected: '+err.message}};
 navigator.hid?.addEventListener('disconnect',e=>{if(e.device===device)disconnected()});
 cartArm.onchange=()=>{status.textContent=cartArm.checked?'Carts armed · A1–A3 START · B1–B3 STOP / REWIND':'Cart buttons disarmed'};
 })();
