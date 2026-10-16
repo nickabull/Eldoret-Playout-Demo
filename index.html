@@ -109,29 +109,44 @@
 <div id="spotifyListenModal" class="modal hidden"><div class="modalCard spotifyListenCard"><div class="spotifyListenHead"><h3>SPOTIFY — PERSONAL LISTENING</h3><button id="spotifyListenClose">✕ Close</button></div><p>Official Spotify player. Playback requires Spotify login and is separate from Eldoret's playout decks, carts and mixer.</p><iframe id="spotifyListenFrame" title="Spotify personal listening" src="about:blank" width="100%" height="352" frameborder="0" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy"></iframe></div></div><div id="toast"></div>
 <script src="meter.js?v=0.6.45"></script><script src="desk-now-playing.js?v=0.6.45"></script>
 <script src="audit.js?v=0.6.45"></script>
-<script src="safety-cache.js?v=0.6.45"></script><script src="app.js?v=0.6.45"></script>
+<script src="safety-cache.js?v=0.6.45"></script><script src="app.js?v=0.6.46-airlite"></script>
 <script src="markers.js?v=0.6.45"></script>
 <script src="hotbox.js?v=0.6.45"></script>
 <script src="voice-track.js?v=0.6.45"></script>
 <script src="demo-library.js?v=0.6.45"></script>
 <script src="cut-cards.js?v=0.6.45"></script><script src="library-access.js?v=0.6.45"></script><script src="desk-layout.js?v=0.6.45"></script><script>
-/* Experimental Airlite CH4 fader start: opt-in, local to this browser tab. */
+/* Airlite input: existing CH4 start plus A/B programmable buttons. */
 (()=>{'use strict';
 const bar=document.createElement('div');
-bar.style.cssText='position:fixed;right:12px;bottom:58px;z-index:9998;background:#10263b;color:#eaf6ff;border:1px solid #5c93b4;border-radius:9px;padding:9px 12px;font:12px Arial;box-shadow:0 5px 18px #0008';
-bar.innerHTML='<strong>AIRLITE CH4 TEST</strong> <button id="airliteTestConnect" style="margin-left:8px;padding:6px">CONNECT</button> <label style="margin-left:8px"><input id="airliteTestArm" type="checkbox" disabled> ARM FADER START</label> <span id="airliteTestStatus" style="margin-left:8px">Disconnected</span>';
+bar.style.cssText='position:fixed;right:12px;bottom:58px;z-index:9998;max-width:440px;background:#10263b;color:#eaf6ff;border:1px solid #5c93b4;border-radius:9px;padding:9px 12px;font:12px Arial;box-shadow:0 5px 18px #0008';
+bar.innerHTML='<strong>AIRLITE · CART BUTTONS</strong> <button id="airliteTestConnect" style="margin-left:8px;padding:6px">CONNECT</button> <button id="airliteDisconnect" disabled style="padding:6px">DISCONNECT</button><div style="margin-top:7px"><label><input id="airliteTestArm" type="checkbox" disabled> ARM CH4 START</label> <label><input id="airliteCartArm" type="checkbox" disabled> ARM CART BUTTONS</label></div><div style="margin-top:6px">A1 → Cart 1 · A2 → Cart 2 · A3 → Cart 3 (current bank)</div><div id="airliteTestStatus" style="margin-top:6px" aria-live="polite">Disconnected · buttons v1</div>';
 document.body.append(bar);
-let device=null,previous=null;
-const status=bar.querySelector('#airliteTestStatus'),arm=bar.querySelector('#airliteTestArm'),connect=bar.querySelector('#airliteTestConnect');
+let device=null,previous=null,buttonMasks=[0,0];
+const status=bar.querySelector('#airliteTestStatus'),arm=bar.querySelector('#airliteTestArm'),cartArm=bar.querySelector('#airliteCartArm'),connect=bar.querySelector('#airliteTestConnect'),disconnect=bar.querySelector('#airliteDisconnect');
+function reset(){previous=null;buttonMasks=[0,0];arm.checked=false;cartArm.checked=false;}
 function report(e){
- const raw=Array.from(new Uint8Array(e.data.buffer,e.data.byteOffset,e.data.byteLength));
- const bytes=(raw[0]===10||raw[0]===8)?raw:[e.reportId,...raw];
- if(bytes[0]!==10||bytes[1]!==224||bytes.length<10)return;
- const next=bytes[5]===1;if(bytes[5]!==0&&bytes[5]!==1)return;
+ const bytes=Array.from(new Uint8Array(e.data.buffer,e.data.byteOffset,e.data.byteLength));
+ // Monitor recordings include the protocol header in data, with reportId 0.
+ if(bytes[0]===0x04&&bytes[1]===0xc4&&bytes.length>=10){
+  const next=[bytes[2],bytes[3]],pressed=[];
+  next.forEach((mask,bank)=>{
+   const rising=mask&~buttonMasks[bank];
+   for(let bit=0;bit<8;bit++)if(rising&(1<<bit)){
+    const name=(bank===0?'A':'B')+(bit+1);pressed.push(name);
+    if(cartArm.checked&&bank===0&&bit<3)startCart(bit);
+   }
+  });
+  buttonMasks=next;
+  if(pressed.length)status.textContent=pressed.map(name=>name+(cartArm.checked&&/^A[1-3]$/.test(name)?' → Cart '+name.slice(1)+' START':cartArm.checked?' · unassigned':' · disarmed')).join(' / ');
+  return;
+ }
+ // Routine 08 f0 reports do not indicate a button release.
+ const frame=(bytes[0]===10||bytes[0]===8)?bytes:[e.reportId,...bytes];
+ if(frame[0]!==10||frame[1]!==224||frame.length<10)return;
+ const next=frame[5]===1;if(frame[5]!==0&&frame[5]!==1)return;
  status.textContent='CH4 '+(next?'ON':'OFF')+(arm.checked?' · armed':' · disarmed');
  if(previous===false&&next&&arm.checked){
-   const play=document.getElementById('playBtn');
-   if(play){play.click();status.textContent='CH4 ON → PLAY command sent';}
+  document.getElementById('playBtn')?.click();status.textContent='CH4 ON → PLAY command sent';
  }
  previous=next;
 }
@@ -142,10 +157,16 @@ connect.onclick=async()=>{
   if(!found.length)return;
   if(device)device.removeEventListener('inputreport',report);
   device=found[0];if(!device.opened)await device.open();
-  device.addEventListener('inputreport',report);previous=null;arm.disabled=false;
-  status.textContent='Connected · disarmed';connect.textContent='RECONNECT';
+  reset();device.addEventListener('inputreport',report);arm.disabled=false;cartArm.disabled=false;disconnect.disabled=false;
+  // Resume the browser audio engine during this user click, before HID starts.
+  try{await window.bullResumeAudio?.()}catch{}
+  status.textContent='Connected · tick ARM CART BUTTONS to enable A1–A3';connect.textContent='RECONNECT';
  }catch(err){status.textContent='Connection failed: '+err.message}
 };
+function disconnected(){if(device)device.removeEventListener('inputreport',report);device=null;reset();arm.disabled=true;cartArm.disabled=true;disconnect.disabled=true;connect.textContent='CONNECT';status.textContent='Disconnected · buttons v1';}
+disconnect.onclick=async()=>{const old=device;disconnected();try{if(old?.opened)await old.close()}catch(err){status.textContent='Disconnected: '+err.message}};
+navigator.hid?.addEventListener('disconnect',e=>{if(e.device===device)disconnected()});
+cartArm.onchange=()=>{status.textContent=cartArm.checked?'Carts armed · A1–A3 start Carts 1–3':'Cart buttons disarmed'};
 })();
 </script>
 <script>
