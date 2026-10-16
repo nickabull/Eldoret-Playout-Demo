@@ -18,10 +18,37 @@
  panel.addEventListener('dragover',e=>{e.preventDefault();e.dataTransfer.dropEffect='copy';panel.classList.add('hotOver')});
  panel.addEventListener('dragleave',e=>{if(!panel.contains(e.relatedTarget))panel.classList.remove('hotOver')});
  panel.addEventListener('drop',e=>{e.preventDefault();e.stopPropagation();panel.classList.remove('hotOver');const x=fromDrop(e);if(x)load(x);else toast('Drag playable audio from library, playlist or carts')});
- playBtn.onclick=async()=>{if(!loaded?.url)return;if(playing){audio.pause();playing=false;state();return}try{if(audio.ended||audio.currentTime>=audio.duration)audio.currentTime=loaded.start||0;window.bullApplyCutLevel?.(audio,loaded);await audio.play();playing=true;state()}catch{toast('Could not play this audio')}};
- stopBtn.onclick=()=>{audio.pause();if(loaded?.url)audio.currentTime=loaded.start||0;playing=false;state()};
+ async function startHotbox(){
+ if(!loaded?.url||playing||!audio.paused)return;
+ try{
+  if(audio.ended||audio.currentTime>=audio.duration)audio.currentTime=loaded.start||0;
+  window.bullApplyCutLevel?.(audio,loaded);
+  await window.bullResumeAudio?.();
+  await audio.play();playing=true;state();
+  window.bullLog?.('PLAY',{fader:'C',title:loaded.title,artist:loaded.artist||'',source:'HOTBOX'});
+ }catch(e){toast('Hotbox play failed: '+e.message)}
+}
+function stopHotbox(){
+ if(!loaded)return;
+ const wasPlaying=!audio.paused;
+ audio.pause();audio.currentTime=loaded.start||0;playing=false;state();
+ if(wasPlaying)window.bullLog?.('STOP',{fader:'C',title:loaded.title,artist:loaded.artist||'',source:'HOTBOX'});
+}
+playBtn.onclick=startHotbox;
+ stopBtn.onclick=stopHotbox;
  clearBtn.onclick=()=>{audio.pause();audio.removeAttribute('src');audio.load();loaded=null;playing=false;state()};
  audio.onended=()=>{playing=false;state()};
+let faderCPosition=null,faderCArmed=false;
+window.bullHotboxArm=value=>{faderCArmed=!!value;faderCPosition=null};
+window.bullHotboxFaderSignal=bytes=>{
+ if(!faderCArmed||bytes.length!==10||bytes[0]!==10||bytes[1]!==0xea)return;
+ const value=bytes[7];if(value!==0&&value!==1)return;
+ const before=faderCPosition;faderCPosition=value;
+ if(before===null||before===value)return;
+ if(value===1)startHotbox();else stopHotbox();
+};
+window.bullHotboxStart=startHotbox;
+window.bullHotboxStop=stopHotbox;
  const carts=document.getElementById('carts');
  function makeCartsDraggable(){carts.querySelectorAll('.cart').forEach(b=>{b.draggable=true;b.title='Drag to Fader C hotbox';b.addEventListener('dragstart',e=>{const slot=Number(b.dataset.slot),cfg=cartBanks[activeBank]?.[slot],src=cfg&&lib.find(x=>x.id===cfg.libId);if(!src){e.preventDefault();return}e.dataTransfer.setData('text/plain',src.id);e.dataTransfer.effectAllowed='copy'})})}
  const observer=new MutationObserver(makeCartsDraggable);observer.observe(carts,{childList:true});makeCartsDraggable();
