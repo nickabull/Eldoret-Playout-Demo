@@ -68,6 +68,17 @@ function startCart(slot){
  if(player&&(!player.paused||player._bullStarting))return;
  toggleCart(slot);
 }
+// Matching B-row buttons stop and rewind only their cart in the current bank.
+function stopCart(slot){
+ const player=cartPlayers[activeBank+'-'+slot];
+ if(!player)return;
+ if(player.paused&&!player._bullStarting&&player.currentTime===0)return;
+ player.pause();
+ player.currentTime=0;
+ const cfg=getCart(slot),src=cfg&&lib.find(v=>v.id===cfg.libId);
+ window.bullLog?.('STOP',{fader:'D',title:src?.title||'',artist:src?.artist||'',source:'SONIFEX',cart:slot+1,bank:activeBank+1});
+ renderCarts();
+}
 function openCartEditor(slot){editingCart=slot;const cfg=getCart(slot)||{};$('cartName').value=cfg.name||('CART '+(slot+1));$('cartColor').value=cfg.color||defaultColors[slot%defaultColors.length];$('cartLoop').checked=!!cfg.loop;$('cartModal').classList.remove('hidden')}
 $('cartCancel').onclick=()=>$('cartModal').classList.add('hidden');
 $('cartSave').onclick=()=>{const cfg=getCart(editingCart);if(cfg){cfg.name=$('cartName').value;cfg.color=$('cartColor').value;cfg.loop=$('cartLoop').checked;saveCarts();renderCarts()}$('cartModal').classList.add('hidden')};
