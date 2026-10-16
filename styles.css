@@ -180,3 +180,23 @@
 .top .back .backTiming{display:none!important}
 .top .back .deskNowPlaying{flex:1 1 100%!important;width:100%!important;min-width:0!important;max-width:none!important;align-self:stretch!important;padding:6px 13px!important}
 .top .back #deskNpTitle{font-size:clamp(15px,1.6vw,23px)!important}
+
+/* Sonifex transport lamps: dim lenses until their actual transport state is active. */
+.sonifexFace .sfPlay span{
+ background:linear-gradient(#245b43,#133b2a 45%,#0b261b)!important;
+ box-shadow:inset 0 0 0 2px #0007,inset 0 2px 3px #ffffff14,0 1px 2px #0007!important;
+}
+.sonifexFace .sfStop span{
+ background:linear-gradient(#643033,#421c22 45%,#2c1117)!important;
+ box-shadow:inset 0 0 0 2px #0007,inset 0 2px 3px #ffffff14,0 1px 2px #0007!important;
+}
+.sonifexFace.playing .sfPlay span{
+ background:radial-gradient(ellipse at 50% 38%,#b8ffcf 0%,#48ff91 40%,#00c75b 100%)!important;
+ border-color:#33c66c!important;border-top-color:#a5ffc2!important;border-left-color:#a5ffc2!important;
+ box-shadow:inset 0 0 6px #ddffe2,0 0 9px #23ff70cc,0 0 18px #23ff7055!important;
+}
+.sonifexFace.loaded:not(.playing) .sfStop span{
+ background:radial-gradient(ellipse at 50% 38%,#ffc0b7 0%,#ff4e50 40%,#da1425 100%)!important;
+ border-color:#cb3441!important;border-top-color:#ffaba4!important;border-left-color:#ffaba4!important;
+ box-shadow:inset 0 0 6px #ffe0d8,0 0 9px #ff354dcc,0 0 18px #ff354d55!important;
+}
