@@ -47,6 +47,8 @@ function update(){const x=log.find(v=>v.id===sel);if(!x)return;x.title=$('eTitle
 
 $('audioFiles').onchange=async e=>{
  const files=[...e.target.files];
+ window.bullAudioLibrary?.protect();
+ await window.bullLibraryReady;
  for(const f of files){
   $('status').textContent='Importing / measuring peak: '+f.name;
   const u=URL.createObjectURL(f),a=new Audio(u);
@@ -55,13 +57,21 @@ $('audioFiles').onchange=async e=>{
    const n=f.name.replace(/\.[^.]+$/,'').replace(/^\d{1,3}[. _-]+/,''),parts=n.split(/\s+[-–—]\s+/),artist=parts.length>1?parts.shift().trim():'Imported audio',title=parts.length?parts.join(' - ').trim():n;
    const item={id:crypto.randomUUID(),title,artist,dur:a.duration,url:u,filename:f.name};
    let problem='';try{await window.bullAnalyseImportedCut?.(item,f)}catch(err){problem=err.message}
-   lib.push(item);library();renderCarts();linkSpotifyAudio();
-   $('status').textContent=problem?'Imported '+title+' · normalisation unavailable: '+problem:'Imported '+title+' · peak normalisation ready (Cut Card to adjust)';
+   let saveProblem='';
+   try{
+    if(!item.audioKey)item.audioKey=await window.bullAudioLibrary.hash(f);
+    const existing=lib.find(x=>x.audioKey===item.audioKey);
+    if(existing){await window.bullAudioLibrary.save(existing,f);URL.revokeObjectURL(u);window.bullAudioLibrary.status(lib.filter(x=>x.savedLocally).length+' cuts saved on this device · restored automatically');$('status').textContent=title+' is already in your saved library';continue}
+    await window.bullAudioLibrary.save(item,f);
+   }catch(err){saveProblem=err.message}
+   lib.push(item);library();restoreLibraryLinks();renderCarts();linkSpotifyAudio();
+   window.bullAudioLibrary?.status(saveProblem?'Audio available this session only: '+saveProblem:lib.filter(x=>x.savedLocally).length+' cuts saved on this device · restored automatically');
+   $('status').textContent=saveProblem?'Imported '+title+' · NOT SAVED: '+saveProblem:problem?'Saved '+title+' · normalisation unavailable: '+problem:'Saved '+title+' in your library · peak normalisation ready';
   }catch(err){URL.revokeObjectURL(u);$('status').textContent='Import failed: '+f.name+' · '+err.message}
  }
  e.target.value='';
 };
-function library(){const q=$('search').value.toLowerCase(),r=$('library');r.innerHTML='';lib.filter(x=>(x.title+' '+x.artist).toLowerCase().includes(q)).forEach(x=>{const d=document.createElement('div');d.className='librow';d.draggable=true;d.dataset.libid=x.id;d.innerHTML='<span><b>'+x.title+'</b><br><small>'+x.artist+'</small></span><span>'+mm(x.dur)+'</span><button class="libAddPlaylist">＋ ADD TO PLAYLIST</button>';d.ondragstart=e=>e.dataTransfer.setData('text/plain',x.id);const cardButton=document.createElement('button');cardButton.textContent='CUT CARD';cardButton.className='libCardButton';cardButton.title='Open music metadata and presenter notes';cardButton.onclick=()=>window.bullOpenCutCard?.(x.artist,x.title,x.filename,undefined,x);d.appendChild(cardButton);d.querySelector('button').onclick=()=>{const n={...x,id:crypto.randomUUID(),intro:0,cue:0,segue:Math.max(0,x.dur-5),fade:2,type:'auto',fixed:''};log.push(n);sel=n.id;render();edit()};r.appendChild(d)})}
+function library(){const q=$('search').value.toLowerCase(),r=$('library');r.innerHTML='';lib.filter(x=>(x.title+' '+x.artist).toLowerCase().includes(q)).forEach(x=>{const d=document.createElement('div');d.className='librow';d.draggable=true;d.dataset.libid=x.id;d.innerHTML='<span><b>'+x.title+'</b><br><small>'+x.artist+'</small></span><span>'+mm(x.dur)+'</span><button class="libAddPlaylist">＋ ADD TO PLAYLIST</button>';d.ondragstart=e=>e.dataTransfer.setData('text/plain',x.id);const cardButton=document.createElement('button');cardButton.textContent='CUT CARD';cardButton.className='libCardButton';cardButton.title='Open music metadata and presenter notes';cardButton.onclick=()=>window.bullOpenCutCard?.(x.artist,x.title,x.filename,undefined,x);d.appendChild(cardButton);d.querySelector('button').onclick=()=>{const n={...x,localAudioId:x.id,id:crypto.randomUUID(),intro:0,cue:0,segue:Math.max(0,x.dur-5),fade:2,type:'auto',fixed:''};log.push(n);sel=n.id;render();edit()};r.appendChild(d)})}
 $('search').oninput=library;
 
 async function start(i){if(window.bullFaderMode?.())return window.bullFaderPlayItem(i);const x=log[i];if(!x)return;if(!x.url && !(await window.bullCachedAudio?.(x))){window.bullLog?.('FAILED',{fader:'A/B',title:x.title,reason:'Missing playable audio'});$('status').textContent='AUDIO MISSING — import a local file for '+x.title;toast('Spotify reference only — import a playable audio file');return}const to=deck===A?B:A;to.src=x.url||await window.bullCachedAudio?.(x);to.currentTime=x.cue||0;window.bullApplyCutLevel?.(to,x);try{await window.bullResumeAudio?.()}catch(e){$('status').textContent='AUDIO ENGINE: '+e.message;toast('Audio engine: '+e.message);return}try{await to.play()}catch(e){const backup=await window.bullCachedAudio?.(x,true);if(backup&&backup!==to.src){try{to.src=backup;to.currentTime=x.cue||0;await to.play()}catch(f){e=f}}if(to.paused){window.bullLog?.('FAILED',{fader:to===A?'A':'B',title:x.title,reason:e.message});toast('Playback failed: '+e.message);return}}window.bullLog?.('PLAY',{fader:to===A?'A':'B',title:x.title,artist:x.artist||'',duration:x.dur||0,source:'MAIN'});deck.pause();deck=to;play=i;$('status').textContent='Playing '+x.title;render();setTimeout(()=>{if(deck!==to||to.paused)return;if(to.currentTime<0.1){$('status').textContent='AUDIO STALLED · '+(window.bullAudioEngineState?.()||'unknown')+' · readyState '+to.readyState+' · '+x.title;toast('Audio stalled — check audio engine status at bottom of desk')}},2200)}
@@ -71,8 +81,8 @@ $('stopBtn').onclick=()=>{if(window.bullFaderMode?.()){window.bullFaderStopAll()
 $('addBlank').onclick=()=>{const n={id:crypto.randomUUID(),title:'New Item',artist:'',dur:60,intro:0,cue:0,segue:0,fade:2,type:'manual',fixed:'',url:null};log.push(n);sel=n.id;render();edit()};
 $('deleteItem').onclick=()=>{log=log.filter(x=>x.id!==sel);sel=log[0]?.id||null;render();edit()};
 $('duplicate').onclick=()=>{const x=log.find(v=>v.id===sel);if(x){const n={...x,id:crypto.randomUUID(),title:x.title+' copy'};log.push(n);sel=n.id;render();edit()}};
-$('saveSchedule').onclick=()=>localStorage.setItem('eldoret-demo',JSON.stringify(log));
-$('loadSchedule').onclick=()=>{const s=localStorage.getItem('eldoret-demo');if(s){log=JSON.parse(s);sel=log[0]?.id||null;render();edit()}};
+$('saveSchedule').onclick=()=>localStorage.setItem('eldoret-demo',JSON.stringify(log.map(({url,...item})=>item)));
+$('loadSchedule').onclick=async()=>{await window.bullLibraryReady;const s=localStorage.getItem('eldoret-demo');if(s){log=JSON.parse(s);restoreLibraryLinks();sel=log[0]?.id||null;render();edit()}};
 
 function getCart(slot){return cartBanks[activeBank][slot]}
 // Muted paper-label colours, chosen once per loaded cart.
@@ -282,3 +292,29 @@ window.bullRemoteCartSnapshot=()=>({bank:activeBank,carts:Array.from({length:3},
 })});
 
 
+
+
+// Restore stable IDs and create fresh playable URLs after every page load.
+function restoreLibraryLinks(){
+ for(const item of log){
+  const hit=lib.find(x=>item.audioKey&&x.audioKey===item.audioKey)||lib.find(x=>x.id===item.localAudioId)||matchAudio(item);
+  if(hit){item.url=hit.url;item.localAudioId=hit.id;item.audioKey=hit.audioKey;item.audioLevel=hit.audioLevel;item.audioMissing=false}
+  else if(item.url?.startsWith('blob:')){item.url=null;item.audioMissing=true}
+ }
+ let repaired=false;
+ for(const bank of cartBanks)for(const cfg of bank){
+  if(!cfg||lib.some(x=>x.id===cfg.libId))continue;
+  const matches=lib.filter(x=>norm(x.title)===norm(cfg.name));
+  if(matches.length===1){cfg.libId=matches[0].id;repaired=true}
+ }
+ if(repaired)saveCarts();
+}
+window.bullLibraryReady=(async()=>{
+ try{
+  window.bullAudioLibrary.status('Restoring saved audio…');
+  const saved=await window.bullAudioLibrary.list();
+  lib.push(...saved);restoreLibraryLinks();library();renderCarts();linkSpotifyAudio();render();
+  window.bullAudioLibrary.status(saved.length?saved.length+' cuts saved on this device · restored automatically':'Import once to save audio on this device');
+  if(saved.length)$('status').textContent='Restored '+saved.length+' saved cuts · ready';
+ }catch(err){window.bullAudioLibrary?.status('Saved library unavailable: '+err.message+' · imports will report whether they are saved')}
+})();
