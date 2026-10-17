@@ -193,7 +193,12 @@ function toggleCart(slot){
  const info={fader:'CART '+(slot+1),channelId:'CART:'+bank+':'+(slot+1),cart:slot+1,bank,title:src.title,artist:src.artist||'',duration:src.dur||0,source,audioKey:src.audioKey||''};
  const a=new Audio(src.url);window.bullTrackPlayback?.(a,info);window.bullApplyCutLevel?.(a,src);a.loop=!!cfg.loop;cartPlayers[key]=a;window.eldoretMeterRegister?.(a);
  a.ontimeupdate=renderCarts;a.onended=renderCarts;a._bullStarting=true;
- a.play().catch(e=>{if(!a.error)window.bullLog?.('FAILED',{...info,reason:e.message})}).finally(()=>{a._bullStarting=false;renderCarts()});renderCarts();
+ (async()=>{
+  const sink=localStorage.getItem('bull-cart-output-id')||'';
+  if(sink){if(typeof window.bullRouteAudio!=='function')throw Error('Cart output routing unavailable');await window.bullRouteAudio(a,sink)}
+  if(cartPlayers[key]!==a)return;
+  await a.play();
+ })().catch(e=>{a.pause();window.bullLog?.('FAILED',{...info,reason:e.message});toast('Cart output failed: '+e.message)}).finally(()=>{a._bullStarting=false;renderCarts()});renderCarts();
 }
 // Hardware starts are play-only: a second press cannot stop a running cart.
 function startCart(slot){
