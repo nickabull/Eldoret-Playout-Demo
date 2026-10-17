@@ -119,7 +119,7 @@
 <div id="spotifyListenModal" class="modal hidden"><div class="modalCard spotifyListenCard"><div class="spotifyListenHead"><h3>SPOTIFY — PERSONAL LISTENING</h3><button id="spotifyListenClose">✕ Close</button></div><p>Official Spotify player. Playback requires Spotify login and is separate from Eldoret's playout decks, carts and mixer.</p><iframe id="spotifyListenFrame" title="Spotify personal listening" src="about:blank" width="100%" height="352" frameborder="0" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy"></iframe></div></div><div id="toast"></div>
 <script src="airlite-telemetry.js?v=0.6.66"></script><script src="cut-levels.js?v=0.6.56"></script><script src="meter.js?v=0.6.65-audio-route"></script><script src="desk-now-playing.js?v=0.6.64-nowplaying"></script>
 <script src="audit.js?v=0.6.64-nowplaying"></script>
-<script src="safety-cache.js?v=0.6.45"></script><script src="audio-library.js?v=0.6.59"></script><script src="app.js?v=0.6.64-nowplaying"></script>
+<script src="safety-cache.js?v=0.6.45"></script><script src="audio-library.js?v=0.6.59"></script><script src="app.js?v=0.6.67-cart-routing"></script>
 <script src="fader-decks.js?v=0.6.63-compact-options"></script>
 <script src="markers.js?v=0.6.52"></script>
 <script src="hotbox.js?v=0.6.64-nowplaying"></script>
@@ -278,7 +278,7 @@ cartArm.onchange=()=>{status.textContent=cartArm.checked?'Carts armed · A1–A3
 const panel=document.createElement('section');
 panel.id='bullAudioRouting';
 panel.style.cssText='position:fixed;left:12px;bottom:58px;z-index:9997;width:min(480px,calc(100vw - 24px));max-height:55vh;overflow:auto;background:#10263b;color:#eaf6ff;border:1px solid #5c93b4;border-radius:9px;padding:12px;font:12px Arial;box-shadow:0 5px 18px #0008';
-panel.innerHTML='<div style="display:flex;justify-content:space-between;align-items:center"><strong>🎚 AUDIO ROUTING · EXPERIMENTAL</strong><button id="routeToggle" style="padding:5px">HIDE</button></div><div id="routeBody"><p>Choose independent browser audio outputs for software Deck A and Deck B. This does not automatically assign Airlite hardware faders.</p><button id="routeResume" style="padding:6px">RESUME AUDIO</button> <button id="routeScan" style="padding:6px">SCAN AUDIO OUTPUTS</button><div style="margin-top:8px">Deck A <select id="routeA" style="max-width:85%;padding:5px"></select></div><div style="margin-top:8px">Deck B <select id="routeB" style="max-width:85%;padding:5px"></select></div><p id="routeStatus">Outputs not scanned yet.</p></div>';
+panel.innerHTML='<div style="display:flex;justify-content:space-between;align-items:center"><strong>🎚 AUDIO ROUTING · EXPERIMENTAL</strong><button id="routeToggle" style="padding:5px">HIDE</button></div><div id="routeBody"><p>Choose independent browser outputs for Deck A, Deck B and Fader D carts. Match each output to its Airlite USB stereo pair; hardware faders are not assigned automatically.</p><button id="routeResume" style="padding:6px">RESUME AUDIO</button> <button id="routeScan" style="padding:6px">SCAN AUDIO OUTPUTS</button><div style="margin-top:8px">Deck A <select id="routeA" style="max-width:85%;padding:5px"></select></div><div style="margin-top:8px">Deck B <select id="routeB" style="max-width:85%;padding:5px"></select></div><div style="margin-top:8px">Fader D · SONIFEX CARTS <select id="routeCarts" style="max-width:85%;padding:5px"></select></div><p id="routeStatus">Outputs not scanned yet.</p></div>';
 document.body.append(panel);
 const $=id=>document.getElementById(id),A=$('deckA'),B=$('deckB'),status=$('routeStatus');
 const toggle=$('routeToggle'),body=$('routeBody');
@@ -288,13 +288,13 @@ async function scan(){
  try{
   const list=await navigator.mediaDevices.enumerateDevices();
   const outputs=list.filter(d=>d.kind==='audiooutput');
-  for(const id of ['routeA','routeB']){
-   const select=$(id),previous=select.value;select.innerHTML='';
+  for(const id of ['routeA','routeB','routeCarts']){
+   const select=$(id),previous=id==='routeCarts'?(localStorage.getItem('bull-cart-output-id')||''):select.value;select.innerHTML='';
    const def=document.createElement('option');def.value='';def.textContent='System default output';select.append(def);
    outputs.forEach((d,i)=>{const opt=document.createElement('option');opt.value=d.deviceId;opt.textContent=d.label||'Audio output '+(i+1);select.append(opt)});
    if([...select.options].some(o=>o.value===previous))select.value=previous;
   }
-  status.textContent=outputs.length+' browser audio output(s) found. Distinct devices are required for independent routing.';
+  status.textContent=outputs.length+' browser audio output(s) found. Set Fader D carts to their own Airlite USB output; default may share Deck B.';
  }catch(e){status.textContent='Scan failed: '+e.message}
 }
 async function apply(which){
@@ -309,6 +309,7 @@ $('routeResume').onclick=async()=>{try{await window.bullRecoverAudio();status.te
 $('routeScan').onclick=scan;
 $('routeA').onchange=()=>apply('A');
 $('routeB').onchange=()=>apply('B');
+$('routeCarts').onchange=()=>{localStorage.setItem('bull-cart-output-id',$('routeCarts').value);status.textContent='Sonifex cart output saved: '+$('routeCarts').selectedOptions[0].text+'. Applies to newly started carts.'};
 scan();
 })();
 </script>
