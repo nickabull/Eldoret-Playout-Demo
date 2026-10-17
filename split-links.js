@@ -1,10 +1,16 @@
 (()=>{'use strict';
 const $=id=>document.getElementById(id);
-const presets=[['South West',153,370],['South Wales',117,327],['West Midlands',187,307],['London',219,357],['South East',244,371],['East Anglia',238,320],['East Midlands',213,273],['North West',184,239],['Yorkshire',220,220],['North East',194,171],['Scotland',177,100],['Northern Ireland',108,311]];
+const geography=window.bullSplitMap||[];
+const presets=geography.map(g=>[g.name,g.point[0],g.point[1],g.key]);
 const KEY='bull-split-links-v1', DB='bull-split-audio-v1';
 let project,selected,db,recorder,stream,chunks=[],recordMode=null,recordStart=0,timer=null,recordLimit=null,preview=null,recordToken=0;
-const fresh=()=>({id:crypto.randomUUID(),name:'Untitled Split Link',duration:0,master:false,areas:presets.map(([name,x,y],i)=>({id:'preset'+i,name,x,y,mode:'master',hasAudio:false}))});
+const fresh=()=>({id:crypto.randomUUID(),name:'Untitled Split Link',duration:0,master:false,areas:presets.map(([name,x,y,mapKey])=>({id:'local-'+mapKey,name,x,y,mapKey,mode:'master',hasAudio:false}))});
 try{project=JSON.parse(localStorage.getItem(KEY))||fresh()}catch{project=fresh()}
+// Preserve existing audio keys and custom outlets; only replace untouched starter presets.
+const oldNames=['South West','South Wales','West Midlands','London','South East','East Anglia','East Midlands','North West','Yorkshire','North East','Scotland','Northern Ireland'];
+if(!project.master&&!project.duration&&project.areas.length===oldNames.length&&project.areas.every((a,i)=>a.id==='preset'+i&&a.name===oldNames[i]&&!a.hasAudio&&a.mode==='master'))project.areas=fresh().areas;
+for(const g of geography){let area=project.areas.find(a=>a.mapKey===g.key)||project.areas.find(a=>a.name.trim().toLowerCase()===g.name.toLowerCase());if(area)area.mapKey=g.key;else project.areas.push({id:'local-'+g.key,name:g.name,x:g.point[0],y:g.point[1],mapKey:g.key,mode:'master',hasAudio:false})}
+try{localStorage.setItem(KEY,JSON.stringify(project))}catch{}
 selected=project.areas[0]?.id;
 const persist=()=>{localStorage.setItem(KEY,JSON.stringify(project));render()};
 const fmt=s=>{s=Math.max(0,Number(s)||0);return String(Math.floor(s/60)).padStart(2,'0')+':'+String(Math.floor(s%60)).padStart(2,'0')+'.'+Math.floor(s%1*10)};
@@ -19,10 +25,17 @@ function render(){
  $('areaName').value=project.areas.find(a=>a.id===selected)?.name||'';
  const markers=$('mapMarkers'),legend=$('regionLegend'),list=$('areas');markers.replaceChildren();legend.replaceChildren();list.replaceChildren();
  for(const area of project.areas){
-  const ns='http://www.w3.org/2000/svg',g=document.createElementNS(ns,'g');g.setAttribute('class','region'+(selected===area.id?' active':'')+(area.hasAudio?' recorded':''));g.setAttribute('tabindex','0');g.setAttribute('role','button');g.setAttribute('aria-label',area.name);g.setAttribute('transform','translate('+area.x+' '+area.y+')');
-  const circle=document.createElementNS(ns,'circle');circle.setAttribute('r','13');const text=document.createElementNS(ns,'text');text.textContent=String(project.areas.indexOf(area)+1);text.setAttribute('text-anchor','middle');text.setAttribute('y','4');g.append(circle,text);
-  g.onclick=()=>select(area.id);g.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();select(area.id)}};markers.appendChild(g);
-  const btn=document.createElement('button');btn.textContent=(project.areas.indexOf(area)+1)+'. '+area.name;btn.style.textAlign='left';if(selected===area.id)btn.classList.add('primary');btn.onclick=()=>select(area.id);legend.appendChild(btn);
+  const region=geography.find(g=>g.key===area.mapKey);
+  if(region){
+   const ns='http://www.w3.org/2000/svg',g=document.createElementNS(ns,'g');g.setAttribute('class','region'+(selected===area.id?' active':'')+(area.hasAudio&&area.mode==='alt'?' recorded':''));g.setAttribute('tabindex','0');g.setAttribute('role','button');g.setAttribute('aria-label',area.name+' · '+(area.mode==='alt'?(area.hasAudio?'alternative recorded':'alternative missing'):'master feed'));g.setAttribute('aria-pressed',String(selected===area.id));g.dataset.areaId=area.id;
+   const path=document.createElementNS(ns,'path');path.setAttribute('d',region.path);const title=document.createElementNS(ns,'title');title.textContent=area.name+' — '+region.description;
+   const [x,y]=region.point,dot=document.createElementNS(ns,'circle');dot.setAttribute('cx',x);dot.setAttribute('cy',y);dot.setAttribute('r','4');dot.setAttribute('class','map-dot');
+   const text=document.createElementNS(ns,'text'),mode=document.createElementNS(ns,'text');let tx=x+11,ty=y+4,anchor='start';if(region.key==='weston'){tx=x-12;anchor='end'}if(region.key==='somerset'){tx=x;ty=y-12;anchor='middle'}
+   text.setAttribute('x',tx);text.setAttribute('y',ty);text.setAttribute('text-anchor',anchor);text.setAttribute('class','map-label');text.textContent=area.name;
+   mode.setAttribute('x',tx);mode.setAttribute('y',ty+17);mode.setAttribute('text-anchor',anchor);mode.setAttribute('class','map-mode');mode.textContent=area.mode==='alt'?(area.hasAudio?'ALT READY':'ALT MISSING'):'MASTER';g.append(title,path,dot,text,mode);
+   g.onclick=()=>select(area.id);g.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();select(area.id);[...markers.children].find(n=>n.dataset.areaId===area.id)?.focus()}};markers.appendChild(g);
+   const btn=document.createElement('button');btn.setAttribute('aria-pressed',String(selected===area.id));btn.append(document.createTextNode(area.name));const badge=document.createElement('small');badge.textContent=mode.textContent;btn.append(badge);if(selected===area.id)btn.classList.add('primary');btn.onclick=()=>select(area.id);legend.appendChild(btn);
+  }
   const row=document.createElement('div');row.className='row'+(selected===area.id?' selected':'');
   const left=document.createElement('div');left.innerHTML='<span class="slotName"></span><small></small>';left.querySelector('span').textContent=area.name;
   left.querySelector('small').textContent=(area.mode==='alt'&&area.hasAudio?'ALT RECORDED':area.mode==='alt'?'ALT MISSING':'MASTER FEED')+' · '+fmt(project.duration);
@@ -33,6 +46,7 @@ function render(){
   actions.append(change,edit);row.append(left,actions);list.appendChild(row);
  }
  const a=project.areas.find(a=>a.id===selected);
+ $('mapSelection').textContent=a?'Selected: '+a.name+' · '+(a.mode==='alt'?'REGIONAL ALTERNATIVE':'MASTER FEED'): 'Select an area';
  $('areaStatus').textContent=a? a.name+' · '+(a.mode==='alt'?(a.hasAudio?'alternative ready':'record an alternative'):'inherits master'):'No area selected';
  $('recordArea').disabled=!a||!project.duration||!!recorder;
  $('recordMaster').disabled=!!recorder;$('stopRec').disabled=!recorder;
