@@ -313,6 +313,19 @@ $('routeCarts').onchange=()=>{localStorage.setItem('bull-cart-output-id',$('rout
 scan();
 })();
 </script>
+<script>
+/* Reverse bridge test: Mac owns playback. No stop on network loss. */
+(()=>{'use strict';
+ const seen=new Set(),bus=new BroadcastChannel('bullshits-mac-play-v1');
+ bus.onmessage=e=>{
+  const p=e.data;
+  if(p?.type!=='play'||typeof p.id!=='string'||!Number.isFinite(p.at)||Math.abs(Date.now()-p.at)>2500||seen.has(p.id))return;
+  seen.add(p.id);if(seen.size>100)seen.clear();
+  const play=document.getElementById('playBtn');
+  if(play){play.click();const status=document.getElementById('status');if(status)status.textContent='Airlite CH1 → Mac PLAY command received'}
+ };
+})();
+</script>
 <script src="remote-host.js?v=0.6.57"></script>
 </body>
 </html>
