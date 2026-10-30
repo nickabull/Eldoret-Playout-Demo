@@ -8,11 +8,37 @@
  function show(id,state,label){const item=buttons.get(id);if(!item)return;item.b.className='console-hotspot '+(state===true?'pressed':state===false?'released':'unknown');item.b.textContent=state===true?'●':state===false?'–':'?';item.b.title=item.label+' · '+label;item.b.setAttribute('aria-label',item.b.title)}
  function reset(){for(const id of buttons.keys())show(id,null,'not mapped / not observed');document.getElementById('consoleFaders').textContent='Fader switches CH4 / CH5 / CH6: awaiting report'}
  function report(bytes,at=Date.now()){
+  if(!Array.isArray(bytes)||bytes.length<2)return;
   const sig=at+':'+bytes.join(',');if(sig===lastSignature)return;lastSignature=sig;
-  if(bytes[0]===4&&bytes[1]===0xc4&&bytes.length>=10){for(let bank=0;bank<2;bank++)for(let bit=0;bit<8;bit++){const down=!!(bytes[bank+2]&(1<<bit));show((bank?'b':'a')+(bit+1),down,down?'PRESSED · input report':'RELEASED · input report')}message.textContent='A/B button press/release received · '+new Date(at).toLocaleTimeString('en-GB')}
-  const knownOn={'10,224,0,1,0,0,0,1,1,1':2,'10,224,0,0,1,1,1,1,1,1':3,'10,224,0,0,0,1,0,1,1,1':4};
-  const ch=knownOn[bytes.join(',')];if(ch){const id='ch'+ch+'-on';show(id,true,'ON-button report observed · physical lamp state unknown');message.textContent='CH'+ch+' ON-button report observed';setTimeout(()=>show(id,null,'physical lamp state unknown'),800)}
-  if(bytes.length===10&&bytes[0]===10&&bytes[1]===0xea)document.getElementById('consoleFaders').textContent='Reported fader switches: '+[4,5,6].map((ch,i)=>'CH'+ch+' '+(bytes[i+5]===1?'UP':bytes[i+5]===0?'DOWN':'UNKNOWN')).join(' · ');
+  const size=bytes[0],cmd=bytes[1];
+  // D&R Airlite USB HID Control Protocol v1.5: 0xE0/A0 ON state,
+  // 0xE1/A1 CUE bitmask, 0xE2/A2 fader switches, 0xC4 A/B controls.
+  // Read-only: no sendReport(), no configuration changes.
+  if(size===4&&cmd===0xc4&&bytes.length>=4){
+   for(let bank=0;bank<2;bank++)for(let bit=0;bit<8;bit++){
+    const down=!!(bytes[bank+2]&(1<<bit));
+    show((bank?'b':'a')+(bit+1),down,down?'PRESSED · D&R C4':'RELEASED · D&R C4');
+   }
+   message.textContent='A/B switch states · '+new Date(at).toLocaleTimeString('en-GB');
+  }
+  if(size===10&&(cmd===0xe0||cmd===0xa0)&&bytes.length>=10){
+   for(let i=0;i<8;i++)if(bytes[i+2]===0||bytes[i+2]===1)
+    show('ch'+(i+1)+'-on',bytes[i+2]===1,'ON state '+(bytes[i+2]?'ACTIVE':'INACTIVE')+' · D&R '+cmd.toString(16).toUpperCase());
+   message.textContent='Channel ON states · '+new Date(at).toLocaleTimeString('en-GB');
+  }
+  if(size===4&&(cmd===0xe1||cmd===0xa1)&&bytes.length>=4){
+   for(let i=0;i<8;i++)show('ch'+(i+1)+'-cue',!!(bytes[2]&(1<<i)),'CUE state · D&R E1/A1');
+   for(const [bit,id] of [[0,'aux-cue'],[1,'ns-cue'],[2,'air-cue']])
+    show(id,!!(bytes[3]&(1<<bit)),'CUE state · D&R E1/A1');
+   message.textContent='CUE states · '+new Date(at).toLocaleTimeString('en-GB');
+  }
+  if(size===10&&(cmd===0xe2||cmd===0xa2)&&bytes.length>=10){
+   const faders=[];
+   for(let i=0;i<8;i++)faders.push('CH'+(i+1)+' '+(bytes[i+2]===1?'UP':bytes[i+2]===0?'DOWN':'?'));
+   document.getElementById('consoleFaders').textContent='Fader switches: '+faders.join(' · ');
+   message.textContent='Fader states · '+new Date(at).toLocaleTimeString('en-GB');
+  }
+  if(size===3&&cmd===0xe5&&bytes.length>=3)show('nonstop',bytes[2]===1,'NonStop state · D&R E5');
  }
  function accept(p){if(!p||typeof p.sender!=='string'||!Number.isFinite(p.at)||typeof p.connected!=='boolean')return;sources.set(p.sender,p);if(p.connected&&p.report?.at&&Date.now()-p.report.at<5000&&Array.isArray(p.report.bytes))report(p.report.bytes,p.report.at);paint()}
  function paint(){const live=localConnected||[...sources.values()].some(p=>p.connected&&Date.now()-p.at<5000);mode.textContent=live?'LIVE HID · READ ONLY':'DISCONNECTED / NO LIVE FEED';mode.classList.toggle('ok',live);if(!live){reset();message.textContent='Connect the Airlite on Main Desk in this browser, or use CONNECT AIRLITE on Overview. Unknown means no verified report.'}}
