@@ -6,7 +6,7 @@
  for(let i=0;i<8;i++){add('a'+(i+1),965,613+i*48.5,'A'+(i+1));add('b'+(i+1),1044,613+i*48.5,'B'+(i+1))}
  for(const [id,x,y,label] of [['aux-cue',964,543,'AUX CUE'],['air-cue',1134,542,'CUE AIR'],['ns-cue',1236,542,'CUE NS'],['nonstop',1185,206,'NONSTOP'],['voip-conn',861,365,'VOIP CONNECT'],['ann-auto',1235,666,'ANNOUNCER AUTO CUE'],['phones-reset',1235,757,'PHONES CUE RESET'],['crm-auto',1235,851,'CRM AUTO CUE'],['talk-voip',1135,953,'TALK VOIP'],['talk-ann',1185,953,'TALK ANN'],['talk-aux',1237,953,'TALK AUX']])add(id,x,y,label);
  function show(id,state,label){const item=buttons.get(id);if(!item)return;item.b.className='console-hotspot '+(state===true?'pressed':state===false?'released':'unknown');item.b.textContent=state===true?'●':state===false?'–':'?';item.b.title=item.label+' · '+label;item.b.setAttribute('aria-label',item.b.title)}
- function reset(){for(const id of buttons.keys())show(id,null,'not mapped / not observed');document.getElementById('consoleFaders').textContent='Fader switches CH4 / CH5 / CH6: awaiting report'}
+ function reset(){for(const id of buttons.keys())show(id,null,'not mapped / not observed');document.getElementById('consoleFaders').textContent='Fader switches CH1–CH8: awaiting D&R E2 report'}
  function report(bytes,at=Date.now()){
   if(!Array.isArray(bytes)||bytes.length<2)return;
   const sig=at+':'+bytes.join(',');if(sig===lastSignature)return;lastSignature=sig;
