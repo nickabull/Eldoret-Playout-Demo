@@ -1,9 +1,9 @@
 /* Photograph overlays represent reported presses, never guessed physical LEDs. */
 (()=>{'use strict';const photo=document.querySelector('#consolePhoto'),mode=document.getElementById('deskMode'),message=document.getElementById('deskMessage'),key='bullshits-airlite-telemetry-v1',sources=new Map(),buttons=new Map();let localConnected=false,lastSignature='';
- const x=[175,274,375,472,572,668,767,863];
+ const x=[175,274,375,472,572,668,770,870];
  function add(id,x,y,label){const b=document.createElement('span');b.className='console-hotspot unknown';b.style.left=x/1408*100+'%';b.style.top=y/1070*100+'%';b.dataset.id=id;b.setAttribute('role','img');b.title=label+' · unknown';b.setAttribute('aria-label',b.title);photo.append(b);buttons.set(id,{b,label})}
  for(let i=0;i<8;i++){add('ch'+(i+1)+'-cue',x[i],544,'CH '+(i+1)+' CUE');add('ch'+(i+1)+'-on',x[i],588,'CH '+(i+1)+' ON')}
- for(let i=0;i<8;i++){add('a'+(i+1),965,613+i*48.5,'A'+(i+1));add('b'+(i+1),1044,613+i*48.5,'B'+(i+1))}
+ for(let i=0;i<8;i++){const perspective=-1.1*i;add('a'+(i+1),965+perspective,613+i*48.5,'A'+(i+1));add('b'+(i+1),1044+perspective,613+i*48.5,'B'+(i+1))}
  for(const [id,x,y,label] of [['aux-cue',964,543,'AUX CUE'],['air-cue',1134,542,'CUE AIR'],['ns-cue',1236,542,'CUE NS'],['nonstop',1185,206,'NONSTOP'],['voip-conn',861,365,'VOIP CONNECT'],['ann-auto',1235,666,'ANNOUNCER AUTO CUE'],['phones-reset',1235,757,'PHONES CUE RESET'],['crm-auto',1235,851,'CRM AUTO CUE'],['talk-voip',1135,953,'TALK VOIP'],['talk-ann',1185,953,'TALK ANN'],['talk-aux',1237,953,'TALK AUX']])add(id,x,y,label);
  function show(id,state,label){const item=buttons.get(id);if(!item)return;item.b.className='console-hotspot '+(state===true?'pressed':state===false?'released':'unknown');item.b.textContent=state===true?'●':state===false?'–':'?';item.b.title=item.label+' · '+label;item.b.setAttribute('aria-label',item.b.title)}
  function reset(){for(const id of buttons.keys())show(id,null,'not mapped / not observed');document.getElementById('consoleFaders').textContent='Fader switches CH1–CH8: awaiting D&R E2 report'}
